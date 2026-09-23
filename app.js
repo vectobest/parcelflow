@@ -9,7 +9,9 @@ const summary = document.querySelector('#summary');
 const message = document.querySelector('#message');
 const caption = document.querySelector('#result-caption');
 const resultTools = document.querySelector('#result-tools');
-const dropZone = document.querySelector('#drop-zone');
+const dropZone = document.querySelector('#batch');
+const inspector = document.querySelector('#decision-inspector');
+const inspectorContent = document.querySelector('#inspector-content');
 let currentResults = [];
 let activeFilter = 'all';
 
@@ -18,6 +20,23 @@ document.querySelector('#policy-version').textContent = DEFAULT_POLICY.version;
 function setMessage(text, type = '') {
   message.textContent = text;
   message.className = `message ${type}`;
+}
+
+async function submitParcels(parcels, idempotencyKey) {
+  try {
+    const response = await fetch('/api/batches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Correlation-ID': crypto.randomUUID() },
+      body: JSON.stringify({ parcels, idempotencyKey })
+    });
+    if (!response.ok) throw new Error('Server API unavailable.');
+    const batch = await response.json();
+    render(batch.results);
+    setMessage(batch.deduplicated ? 'Duplicate batch detected; showing the original processing result.' : `Batch ${batch.batchId.slice(0, 8)} processed with server-side policy ${batch.policyVersion}.`);
+  } catch {
+    render(routeBatch(parcels));
+    setMessage('Offline preview: the server API was unavailable, so no batch was persisted.', 'error');
+  }
 }
 
 function render(results) {
@@ -40,9 +59,13 @@ function render(results) {
     summary.append(item);
   });
 
-  visibleResults.forEach(({ id, parcel, outcome }) => {
+  visibleResults.forEach(({ id, parcel, outcome }, visibleIndex) => {
     const row = document.createElement('tr');
     row.className = `status-${outcome.status}`;
+    row.tabIndex = 0;
+    row.setAttribute('aria-label', `Inspect decision for ${id}`);
+    row.addEventListener('click', () => showEvidence(filteredResults[visibleIndex]));
+    row.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') showEvidence(filteredResults[visibleIndex]); });
     const cells = [id, `${parcel.weight} kg`, `€${Number(parcel.value).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, outcome.department || 'Rejected', outcome.message];
     cells.forEach((value, index) => {
       const cell = document.createElement(index === 4 ? 'td' : 'td');
@@ -57,10 +80,29 @@ function render(results) {
   setMessage(filteredResults.length > 500 ? 'Showing the first 500 matching results. Summary counts include the full batch.' : `${filteredResults.length} matching result${filteredResults.length === 1 ? '' : 's'} · every decision includes its reason.`);
 }
 
+function showEvidence(result) {
+  const { id, outcome } = result;
+  inspector.hidden = false;
+  inspectorContent.replaceChildren();
+  const title = document.createElement('h3');
+  title.textContent = `${id} · ${outcome.decision}`;
+  const reason = document.createElement('p');
+  reason.textContent = outcome.reason;
+  const evidence = document.createElement('dl');
+  [['Status', outcome.status.toUpperCase()], ['Matched rule', outcome.matchedRule], ['Validation', outcome.validation], ['Policy version', outcome.policyVersion], ['Timestamp', outcome.timestamp], ['Evaluated conditions', JSON.stringify(outcome.evaluatedConditions)]].forEach(([label, value]) => {
+    const term = document.createElement('dt');
+    term.textContent = label;
+    const detail = document.createElement('dd');
+    detail.textContent = value;
+    evidence.append(term, detail);
+  });
+  inspectorContent.append(title, reason, evidence);
+}
+
 form.addEventListener('submit', (event) => {
   event.preventDefault();
   const data = new FormData(form);
-  render(routeBatch([{ id: 'manual-1', weight: data.get('weight'), value: data.get('value'), destinationCountry: data.get('destinationCountry') }]));
+  submitParcels([{ id: 'manual-1', weight: data.get('weight'), value: data.get('value'), destinationCountry: data.get('destinationCountry') }], `manual-${Date.now()}`);
 });
 
 fileInput.addEventListener('change', async () => {
@@ -73,7 +115,8 @@ async function processFile(file) {
   fileName.textContent = file.name;
   setMessage('Reading batch…');
   try {
-    render(routeBatch(await parseUpload(file)));
+    const parcels = await parseUpload(file);
+    await submitParcels(parcels, `upload-${file.name}-${file.lastModified}-${file.size}`);
   } catch (error) {
     body.replaceChildren();
     summary.hidden = true;
@@ -96,12 +139,12 @@ dropZone.addEventListener('drop', async (event) => {
 });
 
 document.querySelector('#sample-button').addEventListener('click', () => {
-  render(routeBatch([
+  submitParcels([
     { id: 'PK-1048', weight: 0.6, value: 0, destinationCountry: 'NL' },
     { id: 'PK-1049', weight: 3.2, value: 240, destinationCountry: 'DE' },
     { id: 'PK-1050', weight: 8.4, value: 1250, destinationCountry: 'FR' },
     { id: 'PK-1051', weight: 18, value: 80, destinationCountry: 'BE' }
-  ]));
+  ], 'sample-batch-v1');
   fileName.textContent = 'Sample batch · 4 parcels';
 });
 
@@ -131,8 +174,11 @@ document.querySelector('#clear-button').addEventListener('click', () => {
   summary.hidden = true;
   resultTools.hidden = true;
   currentResults = [];
+  inspector.hidden = true;
   activeFilter = 'all';
   document.querySelectorAll('.filter').forEach((item) => item.classList.toggle('active', item.dataset.filter === 'all'));
   caption.textContent = 'Waiting for a parcel or batch.';
   setMessage('Results will appear here with the rule that made each decision.');
 });
+
+document.querySelector('#close-inspector').addEventListener('click', () => { inspector.hidden = true; });

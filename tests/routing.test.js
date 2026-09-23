@@ -11,6 +11,14 @@ test('routes the documented weight boundaries', () => {
   assert.equal(routeParcel({ ...validParcel, weight: 10.01 }).department, 'Heavy Department');
 });
 
+test('preserves exact decimal boundaries and high-value precedence', () => {
+  assert.equal(routeParcel({ ...validParcel, weight: 1.0001 }).matchedRule, 'WEIGHT_REGULAR');
+  assert.equal(routeParcel({ ...validParcel, weight: 10.0001 }).matchedRule, 'WEIGHT_HEAVY');
+  const heavyHighValue = routeParcel({ ...validParcel, weight: 25, value: 1000.01 });
+  assert.equal(heavyHighValue.status, 'pending');
+  assert.equal(heavyHighValue.matchedRule, 'HIGH_VALUE');
+});
+
 test('holds high-value parcels for insurance approval before routing', () => {
   const result = routeParcel({ ...validParcel, weight: 0.2, value: 1000.01 });
 
@@ -26,6 +34,12 @@ test('rejects invalid input instead of guessing a route', () => {
   assert.equal(routeParcel({ ...validParcel, weight: -1 }).status, 'error');
   assert.equal(routeParcel({ ...validParcel, value: 'not money' }).status, 'error');
   assert.equal(routeParcel({ weight: 1, value: 0 }).status, 'error');
+});
+
+test('valid increasing weights never move to a lighter department', () => {
+  const departments = [0.5, 1.01, 10.01].map((weight) => routeParcel({ ...validParcel, weight }).department);
+
+  assert.deepEqual(departments, ['Mail Department', 'Regular Department', 'Heavy Department']);
 });
 
 test('uses a supplied policy without changing the default policy', () => {

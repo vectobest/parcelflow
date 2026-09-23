@@ -2,32 +2,40 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
+import { DEFAULT_POLICY } from './src/routing.js';
+import { createOperations } from './src/operations.js';
+import { createApiRouter } from './src/http/apiRouter.js';
+import { SECURITY_HEADERS, sendJson } from './src/http/response.js';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 const port = Number(process.env.PORT || 4173);
+const startedAt = Date.now();
+const operations = createOperations();
+const routeApi = createApiRouter({ operations });
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
-createServer(async (request, response) => {
-  const requested = request.url === '/' ? '/index.html' : request.url;
-  const filePath = normalize(join(root, requested.split('?')[0]));
-  if (!filePath.startsWith(root)) {
-    response.writeHead(403);
-    response.end('Forbidden');
-    return;
-  }
-
-  try {
-    const body = await readFile(filePath);
-    response.writeHead(200, {
-      'Content-Type': types[extname(filePath)] || 'application/octet-stream',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'",
-      'X-Content-Type-Options': 'nosniff',
-      'Referrer-Policy': 'no-referrer',
-      'Cache-Control': 'no-store'
-    });
+function serveStatic(request, response, url, correlationId) {
+  const requested = url.pathname === '/' ? '/index.html' : url.pathname;
+  const filePath = normalize(join(root, requested));
+  if (!filePath.startsWith(root)) return sendJson(response, 403, { error: 'Forbidden.' }, correlationId);
+  return readFile(filePath).then((body) => {
+    response.writeHead(200, { ...SECURITY_HEADERS, 'Content-Type': types[extname(filePath)] || 'application/octet-stream', 'X-Correlation-ID': correlationId });
     response.end(body);
-  } catch {
-    response.writeHead(404);
-    response.end('Not found');
+  });
+}
+
+createServer(async (request, response) => {
+  const correlationId = request.headers['x-correlation-id'] || randomUUID();
+  const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+  try {
+    if (url.pathname === '/health') return sendJson(response, 200, { status: 'ok', version: '1.0.0', uptime: Math.floor((Date.now() - startedAt) / 1000) }, correlationId);
+    if (url.pathname === '/ready') return sendJson(response, 200, { status: 'ready', policy: DEFAULT_POLICY.version, components: { routing: 'ready', policyStore: 'ready', audit: 'ready' } }, correlationId);
+    if (url.pathname.startsWith('/api/')) return await routeApi(request, response, url, correlationId);
+    return await serveStatic(request, response, url, correlationId);
+  } catch (error) {
+    const status = error instanceof SyntaxError || /exceeds|not authorized|not found|required|invalid|immutable|already/.test(error.message) ? 400 : 500;
+    sendJson(response, status, { error: error.message, correlationId }, correlationId);
+    console.log(JSON.stringify({ timestamp: new Date().toISOString(), level: 'error', event: 'request_failed', correlationId, path: url.pathname, error: error.message }));
   }
 }).listen(port, () => console.log(`Parcel routing system listening on http://localhost:${port}`));

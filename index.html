@@ -10,12 +10,12 @@
 <body>
   <main class="shell">
     <header class="masthead">
-      <div><p class="eyebrow">Operations / Routing desk <span class="live-pill"><i></i> Live</span></p><h1>Move every parcel<br><em>with confidence.</em></h1><p class="lede">A calm, auditable workspace for making routing decisions at the speed of the floor.</p></div>
+      <div><p class="eyebrow">Operations / Routing desk <span class="live-pill"><i></i> Live</span></p><h1>Move every parcel<br><em>with confidence.</em></h1><p class="lede">A calm, auditable workspace for making routing decisions at the speed of the floor.</p><nav class="quick-nav" aria-label="Control room sections"><a href="#dashboard">Dashboard</a><a href="#route">Route parcel</a><a href="#batch">Batch intake</a><a href="#approvals">Approval queue</a><a href="#health">System health</a></nav></div>
       <div class="policy"><span class="dot"></span><span>Policy <strong id="policy-version">2026-01-01</strong></span></div>
     </header>
 
     <section class="workspace" aria-label="Parcel routing workspace">
-      <aside class="intake panel">
+      <aside id="route" class="intake panel">
         <div class="section-heading"><span class="step">01</span><div><h2>Single parcel</h2><p>Check a parcel before it enters the flow.</p></div></div>
         <form id="parcel-form">
           <label>Weight <span>kg</span><input name="weight" type="number" min="0" step="0.01" value="1" required></label>
@@ -24,21 +24,22 @@
           <button type="submit">Route parcel <span aria-hidden="true">↗</span></button>
         </form>
         <div class="divider"><span>or</span></div>
-        <div id="drop-zone" class="drop-zone"><span class="upload-icon" aria-hidden="true">↑</span><div><h2>Drop a batch here</h2><p>JSON or XML, up to 5 MB.</p></div><label class="file-button">Browse files<input id="file-input" type="file" accept=".json,.xml,application/json,application/xml,text/xml"></label></div>
+        <div id="batch" class="drop-zone"><span class="upload-icon" aria-hidden="true">↑</span><div><h2>Drop a batch here</h2><p>JSON or XML, up to 5 MB.</p></div><label class="file-button">Browse files<input id="file-input" type="file" accept=".json,.xml,application/json,application/xml,text/xml"></label></div>
         <p id="file-name" class="file-name">No file selected</p>
         <button id="sample-button" class="sample-button" type="button"><span aria-hidden="true">✦</span> Load a sample batch</button>
         <div class="rule-note"><span class="rule-mark">!</span><p><strong>Active rule set</strong><br>High-value parcels pause for insurance approval before department routing.</p></div>
       </aside>
 
-      <section class="results panel">
+      <section id="dashboard" class="results panel">
         <div class="results-top"><div class="section-heading"><span class="step">02</span><div><h2>Routing outcomes</h2><p id="result-caption">Waiting for a parcel or batch.</p></div></div><button id="clear-button" class="quiet" type="button">Clear all <span aria-hidden="true">×</span></button></div>
         <div id="summary" class="summary" hidden></div>
         <div id="message" class="message" role="status">Results will appear here with the rule that made each decision.</div>
         <div id="result-tools" class="result-tools" hidden><span>Show</span><button class="filter active" data-filter="all" type="button">All</button><button class="filter" data-filter="routed" type="button">Routed</button><button class="filter" data-filter="pending" type="button">Needs approval</button><button class="filter" data-filter="error" type="button">Errors</button><button id="export-button" class="export-button" type="button">Export CSV ↓</button></div>
         <div class="table-wrap"><table><thead><tr><th>Parcel</th><th>Weight</th><th>Value</th><th>Decision</th><th>Reason</th></tr></thead><tbody id="results-body"></tbody></table></div>
+        <aside id="decision-inspector" class="decision-inspector" hidden aria-live="polite"><div class="inspector-heading"><span class="eyebrow">Decision evidence</span><button id="close-inspector" class="quiet" type="button">Close ×</button></div><div id="inspector-content"></div></aside>
       </section>
     </section>
-    <footer><span>Changes to routing thresholds require a reviewed policy version.</span><span>System status <strong class="online">● online</strong></span></footer>
+    <footer><span id="health">Changes to routing thresholds require a reviewed policy version.</span><span id="approvals">System status <strong class="online">● online</strong></span></footer>
   </main>
   <script type="module" src="app.js"></script>
 </body>

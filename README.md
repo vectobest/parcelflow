@@ -42,7 +42,7 @@ Open http://localhost:4173. The supplied `Container_68465468.xml` is a useful pa
 
 ## Quality and delivery
 
-`npm test` runs six regression tests covering boundaries, approval precedence, validation, policy overrides, and batch identity. A practical feature path is:
+`npm test` runs 14 regression tests covering boundaries, approval precedence, validation, policy overrides, batch identity, policy lifecycle, simulation, replay, and invariants. A practical feature path is:
 
 ```text
 feature/fragile-parcel-rule -> pull request -> tests + review -> merge to main -> canary policy version
@@ -81,6 +81,58 @@ The control room supports manual decisions, drag-and-drop batch upload, a built-
 4. Upload a JSON or XML batch by choosing a file or dropping it into the intake area; discuss the summary versus bounded table rendering.
 5. Open `src/routing.js`, change a policy value through a new version, add its boundary tests, and run `npm test` before merging.
 6. Explain that every result carries the policy version, which makes a decision replayable after a business-rule change.
+
+## Production-oriented extensions
+
+The browser submits batches to the server API. If the API is unavailable, the UI clearly labels the result as an offline preview rather than implying persistence.
+
+```mermaid
+flowchart TD
+  Client[Control room] --> API[Node API]
+  API --> Validate[Bounded JSON and role validation]
+  Validate --> Engine[Pure routing engine]
+  Engine --> Policy[Active immutable policy]
+  Policy --> Decision[Explainable decision]
+  Decision --> Approval[Insurance approval queue]
+  Decision --> Department[Department outcome]
+```
+
+Implemented API surfaces include `POST /api/parcels/route`, `POST /api/batches`, `GET /api/dashboard`, `GET /api/policies`, `POST /api/policies`, policy validate/approve/activate/rollback actions, `GET /api/approvals`, approval actions, `POST /api/simulate`, `POST /api/replay`, `POST /api/retry`, `GET /api/audit`, `GET /health`, and `GET /ready`.
+
+Every decision now carries `parcelId`, `status`, `decision`, `validation`, `matchedRule`, `reason`, evaluated conditions, timestamp, and policy version. Result rows are keyboard accessible and open an evidence inspector in the UI.
+
+Policies follow `DRAFT -> VALIDATED -> APPROVED -> ACTIVE`. Active policy records are immutable; a new version is required for changes. Simulation and replay use the selected policy without mutating the active policy. Batch submissions require an idempotency key, return the original record for duplicates, and share a correlation ID with audit events and structured error logs.
+
+High-value parcels create `PENDING_APPROVAL` records. Reviewer or admin roles can approve or reject once; approval routes the parcel through the original policy version. Operators can process, upload, and retry; reviewers can validate and decide approvals; admins can manage policies and view audit records. This is deliberately a server-side assessment abstraction, not an identity provider.
+
+## Trade-offs and remaining limitations
+
+The operations store is in-memory so the assessment stays dependency-free and easy to inspect. A production deployment would use durable storage, a queue, distributed idempotency records, authenticated identity-provider claims, a dead-letter store, structured log shipping, and isolated XML parsing. Retry metadata and audit records are modeled in the service layer, but persistence and a long-lived retry worker are intentionally outside this small demo.
+
+## Modular low-level design
+
+The implementation follows a dependency-injected application composition root:
+
+```text
+server.js
+  -> http/apiRouter.js
+      -> operations.js (application facade)
+          -> batches/batchService.js
+          -> approvals/approvalService.js
+          -> analysis/decisionComparison.js
+          -> reporting/dashboardService.js
+          -> policy.js
+          -> audit/auditLog.js
+          -> routing.js (pure domain engine)
+```
+
+- **Single Responsibility:** batch processing, approvals, audit, comparison, reporting, authorization, and HTTP transport each have separate modules.
+- **Open/Closed:** new comparison/reporting implementations can be injected without changing the routing engine.
+- **Liskov/Substitution:** services depend on small behavioral collaborators (`policyStore`, `auditLog`, `approvalService`) rather than concrete HTTP or storage details.
+- **Interface Segregation:** the browser/API receives the small `createOperations()` façade; internal services expose only the methods they own.
+- **Dependency Inversion:** orchestration receives `clock`, policy, audit, approval, and batch collaborators, making deterministic tests possible.
+
+The in-memory maps are repository implementations for this assessment. They can be replaced by durable repositories at the composition root without changing `routing.js`, approval rules, policy transitions, or API contracts.
 # 🧩 Technical Assessment: Parcel Routing System
 
 ## Overview
