@@ -20,6 +20,10 @@ const attentionList = document.querySelector('#attention-list');
 const attentionCount = document.querySelector('#attention-count');
 const activityList = document.querySelector('#activity-list');
 const simulationResult = document.querySelector('#simulation-result');
+const riskLevel = document.querySelector('#risk-level');
+const riskMessage = document.querySelector('#risk-message');
+const riskEvidence = document.querySelector('#risk-evidence');
+const riskRecommendation = document.querySelector('#risk-recommendation');
 const menuToggle = document.querySelector('#menu-toggle');
 const sidebar = document.querySelector('.sidebar');
 const profileButton = document.querySelector('#profile-button');
@@ -172,7 +176,7 @@ function runSimulation() {
 }
 
 function showEvidence(result) {
-  const { id, outcome } = result;
+  const { id, parcel, outcome } = result;
   inspector.hidden = false;
   inspectorContent.replaceChildren();
   const title = document.createElement('h3');
@@ -187,7 +191,41 @@ function showEvidence(result) {
     detail.textContent = value;
     evidence.append(term, detail);
   });
-  inspectorContent.append(title, reason, evidence);
+  const steps = document.createElement('div');
+  steps.className = 'decision-steps';
+  const conditions = outcome.evaluatedConditions || {};
+  const insurancePasses = Number(parcel.value) <= Number(conditions.insuranceThreshold ?? DEFAULT_POLICY.insuranceValueThreshold);
+  const stepItems = outcome.status === 'pending'
+    ? [
+      ['01', 'Parcel data validated', true, 'Weight, value, and destination are present.'],
+      ['02', 'Insurance threshold checked', false, `EUR ${Number(parcel.value).toLocaleString('en-US')} is above EUR ${Number(conditions.insuranceThreshold ?? DEFAULT_POLICY.insuranceValueThreshold).toLocaleString('en-US')}.`],
+      ['03', 'Routing paused', false, 'Reviewer approval is required before department routing.']
+    ]
+    : [
+      ['01', 'Parcel data validated', outcome.validation === 'valid', 'Weight, value, and destination passed validation.'],
+      ['02', 'Insurance threshold checked', insurancePasses, insurancePasses ? `EUR ${Number(parcel.value).toLocaleString('en-US')} is at or below the approval threshold.` : 'Insurance approval is required.'],
+      ['03', 'Weight band evaluated', true, outcome.reason],
+      ['04', 'Routing rule selected', true, `Matched ${outcome.matchedRule}.`]
+    ];
+  stepItems.forEach(([number, label, passed, detail]) => {
+    const step = document.createElement('div');
+    step.className = `decision-step ${passed ? 'passed' : 'blocked'}`;
+    const stepNumber = document.createElement('span');
+    stepNumber.className = 'step-number';
+    stepNumber.textContent = number;
+    const icon = document.createElement('span');
+    icon.className = 'step-icon';
+    icon.textContent = passed ? '✓' : '!';
+    const copy = document.createElement('div');
+    const heading = document.createElement('strong');
+    heading.textContent = label;
+    const explanation = document.createElement('small');
+    explanation.textContent = detail;
+    copy.append(heading, explanation);
+    step.append(stepNumber, icon, copy);
+    steps.append(step);
+  });
+  inspectorContent.append(steps, title, reason, evidence);
 }
 
 form.addEventListener('submit', (event) => {
@@ -315,3 +353,21 @@ fetch('/api/dashboard').then((response) => response.ok ? response.json() : null)
   kpiPending.textContent = dashboard.pendingApproval;
   kpiErrors.textContent = dashboard.validationErrors;
 }).catch(() => {});
+
+fetch('/api/risk').then((response) => response.ok ? response.json() : null).then((risk) => {
+  if (!risk) return;
+  riskLevel.textContent = risk.level.replaceAll('_', ' ');
+  riskLevel.className = `risk-level ${risk.level.toLowerCase()}`;
+  riskMessage.textContent = risk.message;
+  riskRecommendation.textContent = risk.recommendation;
+  riskEvidence.replaceChildren();
+  risk.evidence.forEach((item) => {
+    const evidence = document.createElement('div');
+    evidence.className = 'risk-evidence-item';
+    evidence.textContent = item;
+    riskEvidence.append(evidence);
+  });
+}).catch(() => {
+  riskLevel.textContent = 'Unavailable';
+  riskMessage.textContent = 'Operational intelligence is unavailable; continue with the dashboard data.';
+});

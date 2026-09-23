@@ -5,6 +5,7 @@ import { createApprovalService } from './approvals/approvalService.js';
 import { createBatchService } from './batches/batchService.js';
 import { createDecisionComparison } from './analysis/decisionComparison.js';
 import { createDashboardService } from './reporting/dashboardService.js';
+import { createRiskService } from './intelligence/riskService.js';
 
 export function createOperations({ clock = () => new Date(), initialPolicy = DEFAULT_POLICY } = {}) {
   const policyStore = createPolicyStore(initialPolicy);
@@ -13,6 +14,7 @@ export function createOperations({ clock = () => new Date(), initialPolicy = DEF
   const batchService = createBatchService({ clock, policyStore, approvalService, auditLog });
   const comparison = createDecisionComparison({ policyStore, batchService });
   const dashboard = createDashboardService({ batchService, policyStore });
+  const risk = createRiskService({ batchService });
 
   return {
     policyStore,
@@ -24,6 +26,7 @@ export function createOperations({ clock = () => new Date(), initialPolicy = DEF
     replay: comparison.replay,
     retryBatch: batchService.retry,
     dashboard: dashboard.snapshot,
+    risk: risk.assess,
     audit: auditLog.list,
     recordAudit: auditLog.record
   };

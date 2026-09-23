@@ -8,12 +8,14 @@ import { createOperations } from './src/operations.js';
 import { createApiRouter } from './src/http/apiRouter.js';
 import { AuthenticationError } from './src/auth/authentication.js';
 import { SECURITY_HEADERS, sendJson, sendUnauthorized } from './src/http/response.js';
+import { createAsyncGate } from './src/concurrency/asyncGate.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const port = Number(process.env.PORT || 4173);
 const startedAt = Date.now();
 const operations = createOperations();
-const routeApi = createApiRouter({ operations });
+const requestGate = createAsyncGate({ limit: Number(process.env.API_CONCURRENCY || 8) });
+const routeApi = createApiRouter({ operations, requestGate });
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
 function serveStatic(request, response, url, correlationId) {

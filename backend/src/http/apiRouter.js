@@ -3,11 +3,17 @@ import { readJson } from './requestBody.js';
 import { sendJson } from './response.js';
 import { createAuthenticator } from '../auth/authentication.js';
 
-export function createApiRouter({ operations, authenticator = createAuthenticator() }) {
+export function createApiRouter({ operations, authenticator = createAuthenticator(), requestGate }) {
   return async function route(request, response, url, correlationId) {
+    if (requestGate) return requestGate.run(() => routeRequest(request, response, url, correlationId));
+    return routeRequest(request, response, url, correlationId);
+  };
+
+  async function routeRequest(request, response, url, correlationId) {
     const { role, actor } = authenticator.authenticate(request);
     const body = request.method === 'POST' ? await readJson(request) : {};
     if (request.method === 'GET' && url.pathname === '/api/dashboard') return sendJson(response, 200, operations.dashboard(), correlationId);
+    if (request.method === 'GET' && url.pathname === '/api/risk') return sendJson(response, 200, operations.risk(), correlationId);
     if (request.method === 'GET' && url.pathname === '/api/policies') return sendJson(response, 200, { active: operations.policyStore.getActive(), policies: operations.policyStore.list() }, correlationId);
     if (request.method === 'GET' && url.pathname === '/api/approvals') return sendJson(response, 200, operations.approvals(), correlationId);
     if (request.method === 'GET' && url.pathname === '/api/audit') {
@@ -41,5 +47,5 @@ export function createApiRouter({ operations, authenticator = createAuthenticato
       return sendJson(response, 201, policy, correlationId);
     }
     return sendJson(response, 404, { error: 'API route not found.' }, correlationId);
-  };
+  }
 }
