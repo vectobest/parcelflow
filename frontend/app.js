@@ -1,5 +1,5 @@
-import { DEFAULT_POLICY, routeBatch } from './src/routing.js';
-import { parseUpload } from './src/parser.js';
+import { DEFAULT_POLICY, routeBatch } from '../backend/src/routing.js';
+import { parseUpload } from '../backend/src/parser.js';
 
 const form = document.querySelector('#parcel-form');
 const fileInput = document.querySelector('#file-input');

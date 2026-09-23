@@ -9,7 +9,7 @@ import { createApiRouter } from './src/http/apiRouter.js';
 import { AuthenticationError } from './src/auth/authentication.js';
 import { SECURITY_HEADERS, sendJson, sendUnauthorized } from './src/http/response.js';
 
-const root = fileURLToPath(new URL('.', import.meta.url));
+const root = fileURLToPath(new URL('../', import.meta.url));
 const port = Number(process.env.PORT || 4173);
 const startedAt = Date.now();
 const operations = createOperations();
@@ -17,7 +17,7 @@ const routeApi = createApiRouter({ operations });
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
 function serveStatic(request, response, url, correlationId) {
-  const requested = url.pathname === '/' ? '/index.html' : url.pathname;
+  const requested = url.pathname === '/' ? '/frontend/index.html' : url.pathname;
   const filePath = normalize(join(root, requested));
   if (!filePath.startsWith(root)) return sendJson(response, 403, { error: 'Forbidden.' }, correlationId);
   return readFile(filePath).then((body) => {

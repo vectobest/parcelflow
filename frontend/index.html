@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'">
   <title>Parcel routing control room</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/frontend/styles.css">
 </head>
 <body>
   <main class="app-shell">
@@ -13,9 +13,9 @@
       <button id="menu-toggle" class="menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false"><span></span><span></span><span></span></button>
       <div class="brand"><span class="brand-mark">PF</span><div><strong>ParcelFlow</strong><small>Routing control room</small></div></div>
       <button id="profile-button" class="sidebar-footer" type="button" aria-expanded="false" aria-controls="profile-menu"><span class="avatar">NK</span><div><strong>Operations Admin</strong><small>Secure session</small></div><span class="profile-status" aria-label="Profile online"></span></button>
-      <div class="nav-group"><div class="nav-label">Operations</div><nav class="side-nav"><a class="active" href="#overview"><span>◉</span>Overview</a><a href="#route"><span>□</span>Route parcel</a><a href="#batch"><span>↑</span>Batch intake</a><a href="#approvals"><span>!</span>Approval queue</a></nav></div>
+      <div class="nav-groups"><div class="nav-group"><div class="nav-label">Operations</div><nav class="side-nav"><a class="active" href="#overview"><span>◉</span>Overview</a><a href="#route"><span>□</span>Route parcel</a><a href="#batch"><span>↑</span>Batch intake</a><a href="#approvals"><span>!</span>Approval queue</a></nav></div>
       <div class="nav-group"><div class="nav-label">Policy</div><nav class="side-nav"><a href="#simulator"><span>⌁</span>Impact simulator</a><a href="#dashboard"><span>↻</span>Decision replay</a></nav></div>
-      <div class="nav-group"><div class="nav-label">Observe</div><nav class="side-nav"><a href="#health"><span>♥</span>System health</a><a href="#audit-note"><span>≡</span>Audit trail</a></nav></div>
+      <div class="nav-group"><div class="nav-label">Observe</div><nav class="side-nav"><a href="#health"><span>♥</span>System health</a><a href="#audit-note"><span>≡</span>Audit trail</a></nav></div></div>
       <div id="profile-menu" class="profile-menu" hidden><strong>Operations Admin</strong><span>Role: Administrator</span><button type="button" id="sign-out-button">Sign out</button></div>
     </aside>
     <div class="shell">
@@ -59,6 +59,6 @@
     <footer><span id="health">Changes to routing thresholds require a reviewed policy version.</span><span>System status <strong class="online">● online</strong></span></footer>
     </div>
   </main>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="/frontend/app.js"></script>
 </body>
 </html>
