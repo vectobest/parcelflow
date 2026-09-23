@@ -9,3 +9,8 @@ export function sendJson(response, status, body, correlationId) {
   response.writeHead(status, { ...SECURITY_HEADERS, 'Content-Type': 'application/json; charset=utf-8', 'X-Correlation-ID': correlationId });
   response.end(JSON.stringify(body));
 }
+
+export function sendUnauthorized(response, message, correlationId) {
+  response.writeHead(401, { ...SECURITY_HEADERS, 'Content-Type': 'application/json; charset=utf-8', 'WWW-Authenticate': 'Bearer realm="parcel-routing-control-room"', 'X-Correlation-ID': correlationId });
+  response.end(JSON.stringify({ error: message, correlationId }));
+}

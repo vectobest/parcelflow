@@ -12,8 +12,21 @@ const resultTools = document.querySelector('#result-tools');
 const dropZone = document.querySelector('#batch');
 const inspector = document.querySelector('#decision-inspector');
 const inspectorContent = document.querySelector('#inspector-content');
+const kpiTotal = document.querySelector('#kpi-total');
+const kpiSuccess = document.querySelector('#kpi-success');
+const kpiPending = document.querySelector('#kpi-pending');
+const kpiErrors = document.querySelector('#kpi-errors');
+const attentionList = document.querySelector('#attention-list');
+const attentionCount = document.querySelector('#attention-count');
+const activityList = document.querySelector('#activity-list');
+const simulationResult = document.querySelector('#simulation-result');
+const menuToggle = document.querySelector('#menu-toggle');
+const sidebar = document.querySelector('.sidebar');
+const profileButton = document.querySelector('#profile-button');
+const profileMenu = document.querySelector('#profile-menu');
 let currentResults = [];
 let activeFilter = 'all';
+let activityItems = [];
 
 document.querySelector('#policy-version').textContent = DEFAULT_POLICY.version;
 
@@ -32,6 +45,7 @@ async function submitParcels(parcels, idempotencyKey) {
     if (!response.ok) throw new Error('Server API unavailable.');
     const batch = await response.json();
     render(batch.results);
+    addActivity(batch.deduplicated ? 'Batch deduplicated' : 'Batch completed', `${batch.results.length} parcels · policy ${batch.policyVersion}`);
     setMessage(batch.deduplicated ? 'Duplicate batch detected; showing the original processing result.' : `Batch ${batch.batchId.slice(0, 8)} processed with server-side policy ${batch.policyVersion}.`);
   } catch {
     render(routeBatch(parcels));
@@ -58,6 +72,7 @@ function render(results) {
     item.innerHTML = `<strong>${count}</strong><span>${label}</span>`;
     summary.append(item);
   });
+  updateOverview(counts, results);
 
   visibleResults.forEach(({ id, parcel, outcome }, visibleIndex) => {
     const row = document.createElement('tr');
@@ -78,6 +93,82 @@ function render(results) {
 
   caption.textContent = `${results.length} parcel${results.length === 1 ? '' : 's'} assessed · policy ${DEFAULT_POLICY.version}`;
   setMessage(filteredResults.length > 500 ? 'Showing the first 500 matching results. Summary counts include the full batch.' : `${filteredResults.length} matching result${filteredResults.length === 1 ? '' : 's'} · every decision includes its reason.`);
+}
+
+function updateOverview(counts, results) {
+  kpiTotal.textContent = results.length;
+  kpiSuccess.textContent = counts.routed;
+  kpiPending.textContent = counts.pending;
+  kpiErrors.textContent = counts.error;
+  attentionCount.textContent = counts.pending + counts.error;
+  attentionList.replaceChildren();
+  if (!counts.pending && !counts.error) {
+    const empty = document.createElement('p');
+    empty.className = 'empty-copy';
+    empty.textContent = 'No attention items. The current batch is moving cleanly.';
+    attentionList.append(empty);
+    return;
+  }
+  if (counts.pending) addAttentionItem(`${counts.pending} parcel${counts.pending === 1 ? '' : 's'} awaiting insurance approval`, 'Review approval queue', 'pending');
+  if (counts.error) addAttentionItem(`${counts.error} validation error${counts.error === 1 ? '' : 's'} need correction`, 'Open failure center', 'error');
+}
+
+function addAttentionItem(label, action, type) {
+  const item = document.createElement('div');
+  item.className = `attention-item ${type}`;
+  const copy = document.createElement('span');
+  copy.textContent = label;
+  const link = document.createElement('button');
+  link.type = 'button';
+  link.textContent = `${action} →`;
+  link.addEventListener('click', () => { activeFilter = type === 'pending' ? 'pending' : 'error'; if (currentResults.length) render(currentResults); document.querySelector('#dashboard').scrollIntoView({ behavior: 'smooth' }); });
+  item.append(copy, link);
+  attentionList.append(item);
+}
+
+function addActivity(label, detail) {
+  activityItems.unshift({ label, detail, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+  activityItems = activityItems.slice(0, 4);
+  activityList.replaceChildren();
+  activityItems.forEach((activity) => {
+    const item = document.createElement('div');
+    item.className = 'activity-item';
+    const time = document.createElement('time');
+    time.textContent = activity.time;
+    const copy = document.createElement('span');
+    copy.innerHTML = `<strong>${activity.label}</strong><small>${activity.detail}</small>`;
+    item.append(time, copy);
+    activityList.append(item);
+  });
+}
+
+function runSimulation() {
+  if (!currentResults.length) {
+    simulationResult.hidden = false;
+    simulationResult.textContent = 'Process a batch first, then run the candidate policy against those decisions.';
+    return;
+  }
+  const candidate = { ...DEFAULT_POLICY, version: 'candidate', mailWeightLimit: Number(document.querySelector('#candidate-mail').value), regularWeightLimit: Number(document.querySelector('#candidate-regular').value), insuranceValueThreshold: Number(document.querySelector('#candidate-insurance').value) };
+  const before = routeBatch(currentResults.map(({ parcel }) => parcel), DEFAULT_POLICY);
+  const after = routeBatch(currentResults.map(({ parcel }) => parcel), candidate);
+  const changes = after.map((item, index) => ({ id: item.id, before: before[index].outcome, after: item.outcome })).filter(({ before: oldResult, after: newResult }) => oldResult.decision !== newResult.decision || oldResult.status !== newResult.status);
+  simulationResult.hidden = false;
+  simulationResult.replaceChildren();
+  const headline = document.createElement('div');
+  headline.className = 'simulation-headline';
+  headline.innerHTML = `<strong>${changes.length} decision${changes.length === 1 ? '' : 's'} would change</strong><span>Current v1 → Candidate</span>`;
+  simulationResult.append(headline);
+  if (!changes.length) { simulationResult.append(Object.assign(document.createElement('p'), { textContent: 'No decisions change under this candidate policy.' })); return; }
+  const table = document.createElement('table');
+  table.innerHTML = '<thead><tr><th>Parcel</th><th>Current</th><th>Candidate</th><th>Why it changes</th></tr></thead>';
+  const rows = document.createElement('tbody');
+  changes.slice(0, 20).forEach(({ id, before: oldResult, after: newResult }) => {
+    const row = document.createElement('tr');
+    [id, oldResult.decision, newResult.decision, newResult.reason].forEach((value) => { const cell = document.createElement('td'); cell.textContent = value; row.append(cell); });
+    rows.append(row);
+  });
+  table.append(rows);
+  simulationResult.append(table);
 }
 
 function showEvidence(result) {
@@ -182,3 +273,45 @@ document.querySelector('#clear-button').addEventListener('click', () => {
 });
 
 document.querySelector('#close-inspector').addEventListener('click', () => { inspector.hidden = true; });
+document.querySelectorAll('[data-kpi-filter]').forEach((card) => card.addEventListener('click', () => {
+  activeFilter = card.dataset.kpiFilter;
+  document.querySelectorAll('.filter').forEach((item) => item.classList.toggle('active', item.dataset.filter === activeFilter));
+  if (currentResults.length) render(currentResults);
+  document.querySelector('#dashboard').scrollIntoView({ behavior: 'smooth' });
+}));
+document.querySelector('#simulate-button').addEventListener('click', runSimulation);
+
+menuToggle.addEventListener('click', () => {
+  const isOpen = sidebar.classList.toggle('menu-open');
+  menuToggle.setAttribute('aria-expanded', String(isOpen));
+  menuToggle.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+});
+document.querySelectorAll('.side-nav a').forEach((link) => link.addEventListener('click', () => {
+  sidebar.classList.remove('menu-open');
+  menuToggle.setAttribute('aria-expanded', 'false');
+  menuToggle.setAttribute('aria-label', 'Open navigation menu');
+}));
+
+profileButton.addEventListener('click', () => {
+  const isOpen = profileMenu.hidden;
+  profileMenu.hidden = !isOpen;
+  profileButton.setAttribute('aria-expanded', String(isOpen));
+});
+document.querySelector('#sign-out-button').addEventListener('click', () => {
+  profileMenu.hidden = true;
+  profileButton.setAttribute('aria-expanded', 'false');
+});
+document.addEventListener('click', (event) => {
+  if (!profileButton.contains(event.target) && !profileMenu.contains(event.target)) {
+    profileMenu.hidden = true;
+    profileButton.setAttribute('aria-expanded', 'false');
+  }
+});
+
+fetch('/api/dashboard').then((response) => response.ok ? response.json() : null).then((dashboard) => {
+  if (!dashboard || dashboard.totalParcels === 0) return;
+  kpiTotal.textContent = dashboard.totalParcels;
+  kpiSuccess.textContent = dashboard.successful;
+  kpiPending.textContent = dashboard.pendingApproval;
+  kpiErrors.textContent = dashboard.validationErrors;
+}).catch(() => {});

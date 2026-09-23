@@ -6,7 +6,8 @@ import { randomUUID } from 'node:crypto';
 import { DEFAULT_POLICY } from './src/routing.js';
 import { createOperations } from './src/operations.js';
 import { createApiRouter } from './src/http/apiRouter.js';
-import { SECURITY_HEADERS, sendJson } from './src/http/response.js';
+import { AuthenticationError } from './src/auth/authentication.js';
+import { SECURITY_HEADERS, sendJson, sendUnauthorized } from './src/http/response.js';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 const port = Number(process.env.PORT || 4173);
@@ -34,6 +35,7 @@ createServer(async (request, response) => {
     if (url.pathname.startsWith('/api/')) return await routeApi(request, response, url, correlationId);
     return await serveStatic(request, response, url, correlationId);
   } catch (error) {
+    if (error instanceof AuthenticationError) return sendUnauthorized(response, error.message, correlationId);
     const status = error instanceof SyntaxError || /exceeds|not authorized|not found|required|invalid|immutable|already/.test(error.message) ? 400 : 500;
     sendJson(response, status, { error: error.message, correlationId }, correlationId);
     console.log(JSON.stringify({ timestamp: new Date().toISOString(), level: 'error', event: 'request_failed', correlationId, path: url.pathname, error: error.message }));

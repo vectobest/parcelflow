@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { readJson } from './requestBody.js';
 import { sendJson } from './response.js';
+import { createAuthenticator } from '../auth/authentication.js';
 
-export function createApiRouter({ operations }) {
+export function createApiRouter({ operations, authenticator = createAuthenticator() }) {
   return async function route(request, response, url, correlationId) {
-    const role = request.headers['x-role'] || 'OPERATOR';
-    const actor = request.headers['x-actor'] || 'operator';
+    const { role, actor } = authenticator.authenticate(request);
     const body = request.method === 'POST' ? await readJson(request) : {};
     if (request.method === 'GET' && url.pathname === '/api/dashboard') return sendJson(response, 200, operations.dashboard(), correlationId);
     if (request.method === 'GET' && url.pathname === '/api/policies') return sendJson(response, 200, { active: operations.policyStore.getActive(), policies: operations.policyStore.list() }, correlationId);

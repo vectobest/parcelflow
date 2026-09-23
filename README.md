@@ -73,6 +73,8 @@ I changed the generated direction by keeping the policy engine pure, making the 
 
 The control room supports manual decisions, drag-and-drop batch upload, a built-in sample batch for demos, status filters for large result sets, bounded rendering, and CSV export of the complete decision evidence. The interface is intentionally generic: it speaks in parcels, policies, departments, and decisions rather than tying the workflow to one carrier or warehouse.
 
+The overview now adds a compact operations sidebar, live KPI cards, an attention-required queue, recent activity, and a policy impact simulator. The simulator compares the active policy with candidate thresholds against the current batch and never activates or mutates policy state.
+
 ## Interview walkthrough
 
 1. Run the app and route `0.9 kg`, `3 kg`, `10 kg`, and `11 kg` parcels.
@@ -133,6 +135,22 @@ server.js
 - **Dependency Inversion:** orchestration receives `clock`, policy, audit, approval, and batch collaborators, making deterministic tests possible.
 
 The in-memory maps are repository implementations for this assessment. They can be replaced by durable repositories at the composition root without changing `routing.js`, approval rules, policy transitions, or API contracts.
+
+## Authentication and authorization
+
+The API now has an explicit authentication boundary. Local assessment runs use demo mode by default, where the existing `X-Role` and `X-Actor` headers are accepted only to keep the browser demo convenient. This mode must never be used for a public deployment.
+
+Production mode requires bearer authentication:
+
+```bash
+AUTH_MODE=production \
+AUTH_TOKENS='token-from-identity-provider:alice:ADMIN,another-token:bob:REVIEWER' \
+npm start
+```
+
+The server derives the actor and role from the configured token mapping and ignores client-supplied role headers. Invalid or missing credentials return `401 Unauthorized` with `WWW-Authenticate: Bearer`. The token mapping is a dependency-free assessment seam; production should replace it with Entra ID/OIDC JWT validation, key rotation, token expiry, and identity-provider claims.
+
+Roles remain server-authorized: operators can process and retry, reviewers can validate policies and decide approvals, and admins can manage policies and view audit logs. Authentication identifies the caller; authorization decides whether that identity may perform the action.
 # 🧩 Technical Assessment: Parcel Routing System
 
 ## Overview
