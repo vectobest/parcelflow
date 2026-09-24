@@ -103,3 +103,38 @@ test('GET /api/risk and POST /api/assistant/ask work over HTTP on the heuristic 
   assert.equal(answer.body.source, 'heuristic');
   assert.match(answer.body.answer, /v1/);
 });
+
+test('an admin can pre-assign a role to an email that has not signed in yet, and it applies on first sign-in', async () => {
+  const { app } = buildApp();
+  const admin = request.agent(app);
+  await admin.post('/api/auth/dev-login').send({ email: 'admin6@example.com', role: 'ADMIN' });
+
+  const preset = await admin.post('/api/auth/pending-roles').send({ email: 'future@example.com', role: 'REVIEWER' });
+  assert.equal(preset.status, 200);
+  assert.equal(preset.body.role, 'REVIEWER');
+
+  const pending = await admin.get('/api/auth/pending-roles');
+  assert.equal(pending.status, 200);
+  assert.ok(pending.body.some((p) => p.email === 'future@example.com' && p.role === 'REVIEWER'));
+
+  const newUser = request.agent(app);
+  const login = await newUser.post('/api/auth/dev-login').send({ email: 'future@example.com' });
+  assert.equal(login.status, 200);
+  assert.equal(login.body.role, 'REVIEWER');
+
+  const pendingAfter = await admin.get('/api/auth/pending-roles');
+  assert.ok(!pendingAfter.body.some((p) => p.email === 'future@example.com'));
+});
+
+test('pre-assigning a role is admin-only and rejects an already-signed-in email', async () => {
+  const { app } = buildApp();
+  const operator = request.agent(app);
+  await operator.post('/api/auth/dev-login').send({ email: 'op7@example.com', role: 'OPERATOR' });
+  const denied = await operator.post('/api/auth/pending-roles').send({ email: 'someone@example.com', role: 'ADMIN' });
+  assert.equal(denied.status, 403);
+
+  const admin = request.agent(app);
+  await admin.post('/api/auth/dev-login').send({ email: 'admin7@example.com', role: 'ADMIN' });
+  const rejected = await admin.post('/api/auth/pending-roles').send({ email: 'op7@example.com', role: 'ADMIN' });
+  assert.equal(rejected.status, 422);
+});

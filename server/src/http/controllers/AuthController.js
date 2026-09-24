@@ -92,6 +92,38 @@ export class AuthController {
       } catch (error) { next(error); }
     });
 
+    // Assign a role to an email that hasn't signed in yet -- applied automatically the
+    // moment that email actually signs in, instead of that person defaulting to OPERATOR.
+    router.get('/auth/pending-roles', requireAuth(), (req, res, next) => {
+      try {
+        this.#authorizationService.assertPermission(req.identity.role, 'manageUsers');
+        res.status(200).json(this.#userStore.listPendingRoles());
+      } catch (error) { next(error); }
+    });
+
+    router.post('/auth/pending-roles', requireAuth(), (req, res, next) => {
+      try {
+        this.#authorizationService.assertPermission(req.identity.role, 'manageUsers');
+        const { email, role } = req.body || {};
+        if (!email || typeof email !== 'string' || !email.includes('@')) throw new ValidationError('A valid email is required.');
+        if (!ROLES.includes(role)) throw new ValidationError(`Role must be one of ${ROLES.join(', ')}.`);
+        if (this.#userStore.get(email)) throw new ValidationError('That email has already signed in -- change their role directly instead.');
+        const preset = this.#userStore.presetRole(email, role);
+        this.#auditService.record({ action: 'role_preassigned', entity: 'user', entityId: preset.email, actor: req.identity.actor, correlationId: req.correlationId, newValue: role });
+        res.status(200).json(preset);
+      } catch (error) { next(error); }
+    });
+
+    router.delete('/auth/pending-roles/:email', requireAuth(), (req, res, next) => {
+      try {
+        this.#authorizationService.assertPermission(req.identity.role, 'manageUsers');
+        const removed = this.#userStore.removePendingRole(req.params.email);
+        if (!removed) throw new ValidationError('No pending role assignment for that email.');
+        this.#auditService.record({ action: 'role_preassignment_removed', entity: 'user', entityId: req.params.email.toLowerCase(), actor: req.identity.actor, correlationId: req.correlationId });
+        res.status(200).json({ ok: true });
+      } catch (error) { next(error); }
+    });
+
     return router;
   }
 }

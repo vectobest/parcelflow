@@ -61,10 +61,8 @@ export default function Layout({ children }) {
 
       {/* Ambient background mesh */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute -top-40 -left-20 w-[550px] h-[550px] bg-primary/10 rounded-full blur-[130px] opacity-70" />
-        <div className="absolute top-[28%] right-[-100px] w-[600px] h-[600px] bg-secondary-container/20 rounded-full blur-[140px] opacity-60" />
-        <div className="absolute bottom-10 left-[35%] w-[450px] h-[450px] bg-tertiary-container/15 rounded-full blur-[120px] opacity-40" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))]" />
+        <div className="absolute -top-40 -left-20 w-[550px] h-[550px] bg-primary/5 rounded-full blur-[130px] opacity-50" />
+        <div className="absolute top-[28%] right-[-100px] w-[600px] h-[600px] bg-secondary-container/10 rounded-full blur-[140px] opacity-40" />
       </div>
 
       {menuOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMenuOpen(false)} />}
@@ -72,21 +70,18 @@ export default function Layout({ children }) {
       <aside className={`fixed left-0 top-0 bottom-8 w-64 bg-surface-container-low/90 backdrop-blur-xl z-50 flex flex-col justify-between border-r border-white/[0.08] shadow-2xl transition-transform lg:translate-x-0 ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex flex-col overflow-y-auto">
           <div className="h-16 px-4 flex items-center gap-3 border-b border-white/[0.06] bg-surface-container-lowest/70 backdrop-blur-sm shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary/30 to-primary-container/20 border border-primary/40 flex items-center justify-center text-primary shadow-[0_0_12px_rgba(208,188,255,0.25)] transition-transform hover:scale-105">
+            <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary">
               <Icon name="hub" className="text-[22px]" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-[16px] tracking-tight bg-gradient-to-r from-white via-white to-on-surface-variant bg-clip-text text-transparent truncate">PARCELFLOW</span>
+              <span className="font-bold text-[16px] tracking-tight text-white truncate">PARCELFLOW</span>
               <span className="font-mono text-[10px] text-on-surface-variant/80 tracking-wider uppercase font-semibold">Control Room // V2</span>
             </div>
           </div>
           <div className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60 flex items-center justify-between">
             <span>Session</span>
             <span className="inline-flex items-center gap-1.5 text-tertiary">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-tertiary" />
-              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-tertiary" />
               Active
             </span>
           </div>
@@ -99,17 +94,17 @@ export default function Layout({ children }) {
                     key={item.to}
                     to={item.to}
                     end={item.to === '/'}
-                    className={({ isActive }) => `group flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] transition-all duration-200 border ${
+                    className={({ isActive }) => `group flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] transition-colors border ${
                       isActive
-                        ? 'bg-primary/15 text-primary border-primary/25 font-semibold shadow-[0_0_15px_rgba(208,188,255,0.12)]'
+                        ? 'bg-primary/15 text-primary border-primary/25 font-semibold'
                         : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container/70 border-transparent hover:border-white/[0.05] font-medium'
                     }`}
                   >
                     {({ isActive }) => (
                       <>
-                        <Icon name={item.icon} className={`text-[20px] transition-transform group-hover:scale-110 ${isActive ? '' : 'text-on-surface-variant group-hover:text-primary transition-colors'}`} />
+                        <Icon name={item.icon} className={`text-[20px] ${isActive ? '' : 'text-on-surface-variant group-hover:text-primary transition-colors'}`} />
                         <span className="truncate">{item.label}</span>
-                        {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
+                        {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
                       </>
                     )}
                   </NavLink>
@@ -118,9 +113,9 @@ export default function Layout({ children }) {
             ))}
           </nav>
         </div>
-        <button className="m-3 p-3.5 rounded-2xl border border-white/[0.08] bg-surface-container-lowest/80 backdrop-blur-md hover:bg-surface-container flex items-center gap-3 text-left transition-all shadow-inner" type="button" onClick={logout} title="Sign out">
+        <button className="m-3 p-3.5 rounded-2xl border border-white/[0.08] bg-surface-container-lowest/80 backdrop-blur-md hover:bg-surface-container flex items-center gap-3 text-left transition-colors" type="button" onClick={logout} title="Sign out">
           <div className="relative shrink-0">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary/30 to-secondary-container/50 border border-primary/40 flex items-center justify-center text-primary font-bold text-[12px] shadow-[0_0_10px_rgba(208,188,255,0.25)]">
+            <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-[12px]">
               {initials}
             </div>
             <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-tertiary ring-2 ring-surface-container-lowest" />
@@ -165,7 +160,7 @@ export default function Layout({ children }) {
             <div className="h-5 w-px bg-white/[0.1] mx-0.5 hidden sm:block" />
             <div className="hidden sm:flex items-center gap-3 pl-1.5">
               <div className="relative">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary/30 to-secondary-container/50 border border-primary/40 flex items-center justify-center text-primary font-bold text-[12px] shadow-[0_0_10px_rgba(208,188,255,0.25)]">
+                <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-[12px]">
                   {initials}
                 </div>
                 <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-tertiary ring-2 ring-surface" />
@@ -186,10 +181,7 @@ export default function Layout({ children }) {
 
         <footer className="fixed bottom-0 left-0 lg:left-64 right-0 h-8 bg-surface-container-lowest/90 backdrop-blur-xl border-t border-white/[0.08] z-30 flex items-center justify-between px-6 font-mono text-[11px]">
           <div className="flex items-center gap-2 text-on-surface-variant min-w-0">
-            <span className="relative flex h-2 w-2 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-tertiary" />
-            </span>
+            <span className="w-2 h-2 rounded-full bg-tertiary shrink-0" />
             <span className="text-white font-bold shrink-0">ParcelFlow</span>
             <span className="text-white/20 hidden sm:inline">&bull;</span>
             <span className="text-on-surface-variant/90 truncate hidden sm:inline">Signed in as {identity.name || identity.actor}</span>

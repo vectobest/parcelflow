@@ -11,24 +11,23 @@ import Icon from '../components/Icon.jsx';
 const HEALTH_TONE = { HEALTHY: 'LOW', DEGRADED: 'MEDIUM', CRITICAL: 'HIGH' };
 
 const KPI_STYLES = {
-  primary: { icon: 'bg-primary/15 border-primary/30 text-primary shadow-[0_0_12px_rgba(208,188,255,0.2)]', glow: 'bg-primary/10 group-hover:bg-primary/20', border: 'hover:border-primary/40 hover:shadow-primary/10', value: 'text-white' },
-  tertiary: { icon: 'bg-tertiary/15 border-tertiary/30 text-tertiary shadow-[0_0_12px_rgba(78,222,163,0.2)]', glow: 'bg-tertiary/10 group-hover:bg-tertiary/20', border: 'hover:border-tertiary/40 hover:shadow-tertiary/10', value: 'text-tertiary drop-shadow-[0_0_10px_rgba(78,222,163,0.3)]' },
-  secondary: { icon: 'bg-secondary/15 border-secondary/30 text-secondary shadow-[0_0_12px_rgba(192,193,255,0.2)]', glow: 'bg-secondary/10 group-hover:bg-secondary/20', border: 'hover:border-secondary/40 hover:shadow-secondary/10', value: 'text-white' },
-  error: { icon: 'bg-error/20 border-error/40 text-error shadow-[0_0_12px_rgba(255,180,171,0.25)]', glow: 'bg-error/15 group-hover:bg-error/25', border: 'border-error/30 hover:border-error/60 hover:shadow-error/15', value: 'text-error drop-shadow-[0_0_10px_rgba(255,180,171,0.3)]' }
+  primary: { icon: 'bg-primary/15 border-primary/30 text-primary', border: 'hover:border-primary/30', value: 'text-white' },
+  tertiary: { icon: 'bg-tertiary/15 border-tertiary/30 text-tertiary', border: 'hover:border-tertiary/30', value: 'text-tertiary' },
+  secondary: { icon: 'bg-secondary/15 border-secondary/30 text-secondary', border: 'hover:border-secondary/30', value: 'text-white' },
+  error: { icon: 'bg-error/20 border-error/40 text-error', border: 'border-error/25 hover:border-error/40', value: 'text-error' }
 };
 
 function KpiCard({ icon, tone, label, value, note }) {
   const s = KPI_STYLES[tone] || KPI_STYLES.primary;
   return (
-    <div className={`group p-5 rounded-2xl bg-surface-container-low/80 backdrop-blur-md border border-white/[0.08] ${s.border} transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between relative overflow-hidden`}>
-      <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl transition-all ${s.glow}`} />
-      <div className="flex items-center justify-between relative z-10">
+    <div className={`p-5 rounded-2xl bg-surface-container-low/80 backdrop-blur-md border border-white/[0.08] ${s.border} transition-colors flex flex-col justify-between`}>
+      <div className="flex items-center justify-between">
         <span className="text-[12px] font-semibold text-on-surface-variant tracking-wide uppercase">{label}</span>
-        <span className={`w-9 h-9 rounded-xl border flex items-center justify-center group-hover:scale-110 transition-transform ${s.icon}`}>
+        <span className={`w-9 h-9 rounded-xl border flex items-center justify-center ${s.icon}`}>
           <Icon name={icon} className="text-[19px]" />
         </span>
       </div>
-      <div className="mt-4 relative z-10">
+      <div className="mt-4">
         <div className={`font-mono text-[28px] font-bold tracking-tight ${s.value}`}>{value}</div>
         {note && <div className="flex items-center gap-1.5 mt-1.5"><span className="text-[11px] text-on-surface-variant font-medium">{note}</span></div>}
       </div>
@@ -77,16 +76,16 @@ export default function OverviewPage() {
       {attentionRequired.length > 0 && (
         <div className="flex flex-col gap-3.5">
           <div className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-lg bg-error/15 border border-error/30 text-error flex items-center justify-center shadow-[0_0_10px_rgba(255,180,171,0.2)]">
+            <span className="w-7 h-7 rounded-lg bg-error/15 border border-error/30 text-error flex items-center justify-center">
               <Icon name="error" className="text-[18px]" />
             </span>
             <h2 className="text-[17px] font-bold text-white tracking-tight">Needs Immediate Attention</h2>
-            <span className="px-2.5 py-0.5 rounded-full bg-error/20 border border-error/30 text-error text-[11px] font-bold tracking-wide animate-pulse">{attentionRequired.length} item{attentionRequired.length === 1 ? '' : 's'}</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-error/20 border border-error/30 text-error text-[11px] font-bold tracking-wide">{attentionRequired.length} item{attentionRequired.length === 1 ? '' : 's'}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {attentionRequired.map((item, i) => (
-              <div key={i} className="p-5 rounded-2xl bg-surface-container-low/90 backdrop-blur-md border border-error/25 hover:border-error/50 transition-all duration-300 flex items-start gap-3">
-                <span className="w-8 h-8 rounded-xl bg-error/15 border border-error/30 text-error flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(255,180,171,0.15)]">
+              <div key={i} className="p-5 rounded-2xl bg-surface-container-low/90 backdrop-blur-md border border-error/25 flex items-start gap-3">
+                <span className="w-8 h-8 rounded-xl bg-error/15 border border-error/30 text-error flex items-center justify-center shrink-0">
                   <Icon name="priority_high" className="text-[16px]" />
                 </span>
                 <p className="text-[13px] text-on-surface font-medium leading-snug pt-1">{item}</p>
@@ -120,7 +119,7 @@ export default function OverviewPage() {
       </Panel>
 
       <div className="flex flex-wrap gap-3">
-        <Link to="/intake"><Button variant="primary" className="animate-pulse-glow"><Icon name="upload" className="text-[16px]" />Route a Parcel or Batch</Button></Link>
+        <Link to="/intake"><Button variant="primary"><Icon name="upload" className="text-[16px]" />Route a Parcel or Batch</Button></Link>
         <Link to="/incidents"><Button variant="ghost"><Icon name="emergency_home" className="text-[16px]" />View Incident Center</Button></Link>
         <Link to="/assistant"><Button variant="outline"><Icon name="terminal" className="text-[16px]" />Ask the Ops Assistant</Button></Link>
       </div>

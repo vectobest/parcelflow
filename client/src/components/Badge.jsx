@@ -1,8 +1,8 @@
 const TONES = {
-  HIGH: 'bg-error-container/80 text-error border-error/40 shadow-[0_0_10px_rgba(255,180,171,0.2)]',
-  CRITICAL: 'bg-error-container/80 text-error border-error/40 shadow-[0_0_10px_rgba(255,180,171,0.2)]',
-  error: 'bg-error-container/80 text-error border-error/40 shadow-[0_0_10px_rgba(255,180,171,0.2)]',
-  rejected: 'bg-error-container/80 text-error border-error/40 shadow-[0_0_10px_rgba(255,180,171,0.2)]',
+  HIGH: 'bg-error-container/80 text-error border-error/40',
+  CRITICAL: 'bg-error-container/80 text-error border-error/40',
+  error: 'bg-error-container/80 text-error border-error/40',
+  rejected: 'bg-error-container/80 text-error border-error/40',
   MEDIUM: 'bg-secondary-container/50 text-secondary border-secondary/30',
   pending: 'bg-secondary-container/50 text-secondary border-secondary/30',
   LOW: 'bg-tertiary/15 text-tertiary border-tertiary/30',

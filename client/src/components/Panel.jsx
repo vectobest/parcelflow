@@ -3,12 +3,12 @@ import Icon from './Icon.jsx';
 /** Glassmorphic rounded card matching the design system's elevated panels: blurred surface, soft border, icon chip header. */
 export default function Panel({ icon, title, meta, actions, children, className = '', bodyClassName = 'p-5' }) {
   return (
-    <div className={`rounded-2xl bg-surface-container-low/80 backdrop-blur-md border border-white/[0.08] hover:border-white/[0.15] transition-all duration-300 shadow-xl flex flex-col ${className}`}>
+    <div className={`rounded-2xl bg-surface-container-low/80 backdrop-blur-md border border-white/[0.08] shadow-md flex flex-col ${className}`}>
       {(icon || title || actions) && (
         <div className="px-5 pt-5 pb-3 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             {icon && (
-              <span className="w-7 h-7 rounded-lg bg-tertiary/15 border border-tertiary/30 text-tertiary flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(78,222,163,0.15)]">
+              <span className="w-7 h-7 rounded-lg bg-tertiary/15 border border-tertiary/30 text-tertiary flex items-center justify-center shrink-0">
                 <Icon name={icon} className="text-[16px]" />
               </span>
             )}

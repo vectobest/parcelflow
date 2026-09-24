@@ -36,12 +36,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-surface text-on-surface font-sans flex items-center justify-center p-4 relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute -top-40 -left-20 w-[550px] h-[550px] bg-primary/10 rounded-full blur-[130px] opacity-70" />
-        <div className="absolute top-[28%] right-[-100px] w-[600px] h-[600px] bg-secondary-container/20 rounded-full blur-[140px] opacity-60" />
+        <div className="absolute -top-40 -left-20 w-[550px] h-[550px] bg-primary/5 rounded-full blur-[130px] opacity-50" />
+        <div className="absolute top-[28%] right-[-100px] w-[600px] h-[600px] bg-secondary-container/10 rounded-full blur-[140px] opacity-40" />
       </div>
-      <div className="w-full max-w-sm rounded-2xl bg-surface-container-low/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl relative z-10">
+      <div className="w-full max-w-sm rounded-2xl bg-surface-container-low/90 backdrop-blur-xl border border-white/[0.08] shadow-xl relative z-10">
         <div className="h-16 px-4 flex items-center gap-3 border-b border-white/[0.06] bg-surface-container-lowest/70 rounded-t-2xl">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary/30 to-primary-container/20 border border-primary/40 flex items-center justify-center text-primary shadow-[0_0_12px_rgba(208,188,255,0.25)]">
+          <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary">
             <Icon name="hub" className="text-[22px]" />
           </div>
           <div className="flex flex-col">
