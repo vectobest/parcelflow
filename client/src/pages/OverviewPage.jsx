@@ -10,27 +10,28 @@ import Icon from '../components/Icon.jsx';
 
 const HEALTH_TONE = { HEALTHY: 'LOW', DEGRADED: 'MEDIUM', CRITICAL: 'HIGH' };
 
-const KPI_STYLES = {
-  primary: { icon: 'bg-primary/15 border-primary/30 text-primary', border: 'hover:border-primary/30', value: 'text-white' },
-  tertiary: { icon: 'bg-tertiary/15 border-tertiary/30 text-tertiary', border: 'hover:border-tertiary/30', value: 'text-tertiary' },
-  secondary: { icon: 'bg-secondary/15 border-secondary/30 text-secondary', border: 'hover:border-secondary/30', value: 'text-white' },
-  error: { icon: 'bg-error/20 border-error/40 text-error', border: 'border-error/25 hover:border-error/40', value: 'text-error' }
+const KPI_TONES = {
+  primary: { value: 'text-white', mark: 'bg-on-surface-variant/40' },
+  tertiary: { value: 'text-tertiary', mark: 'bg-tertiary' },
+  secondary: { value: 'text-white', mark: 'bg-primary' },
+  error: { value: 'text-error', mark: 'bg-error' }
 };
 
-function KpiCard({ icon, tone, label, value, note }) {
-  const s = KPI_STYLES[tone] || KPI_STYLES.primary;
+// Painted floor bay: big signage count, bay number, and a colour mark along the top edge.
+function KpiCard({ bay, icon, tone, label, value, note }) {
+  const t = KPI_TONES[tone] || KPI_TONES.primary;
   return (
-    <div className={`p-5 rounded-2xl bg-surface-container-low border border-white/[0.08] ${s.border} transition-colors flex flex-col justify-between`}>
-      <div className="flex items-center justify-between">
-        <span className="text-[12px] font-semibold text-on-surface-variant tracking-wide uppercase">{label}</span>
-        <span className={`w-9 h-9 rounded-xl border flex items-center justify-center ${s.icon}`}>
-          <Icon name={icon} className="text-[19px]" />
-        </span>
+    <div className="relative rounded-sm bg-surface-container-low border border-white/[0.08] p-5 pt-6 flex flex-col justify-between overflow-hidden">
+      <span className={`absolute inset-x-0 top-0 h-[3px] ${t.mark}`} aria-hidden="true" />
+      <div className="flex items-start justify-between gap-3">
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-on-surface-variant">{label}</span>
+        <span className="font-mono text-[10px] tracking-[0.14em] text-on-surface-variant/60 shrink-0">BAY {bay}</span>
       </div>
-      <div className="mt-4">
-        <div className={`font-mono text-[28px] font-bold tracking-tight ${s.value}`}>{value}</div>
-        {note && <div className="flex items-center gap-1.5 mt-1.5"><span className="text-[11px] text-on-surface-variant font-medium">{note}</span></div>}
+      <div className="mt-3 flex items-end justify-between gap-3">
+        <div className={`font-display font-black text-[64px] leading-[0.85] tabular-nums ${t.value}`}>{value}</div>
+        <Icon name={icon} className="text-[22px] text-on-surface-variant/50 mb-1" />
       </div>
+      {note && <div className="mt-3 text-[13px] text-on-surface-variant">{note}</div>}
     </div>
   );
 }
@@ -66,33 +67,32 @@ export default function OverviewPage() {
         actions={<Badge tone={HEALTH_TONE[health] || 'MEDIUM'}>{health}</Badge>}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard icon="package_2" tone="primary" label="Parcels Processed" value={snapshot.totalParcels} note="This session" />
-        <KpiCard icon="verified" tone="tertiary" label="Routed" value={snapshot.successful} note="Successfully dispatched" />
-        <KpiCard icon="pending_actions" tone="secondary" label="Awaiting Approval" value={snapshot.pendingApproval} note="In the approval queue" />
-        <KpiCard icon="warning" tone="error" label="Validation Errors" value={snapshot.validationErrors} note={snapshot.validationErrors > 0 ? 'Needs review' : 'None this session'} />
+      <div className="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard bay="01" icon="package_2" tone="primary" label="Parcels Processed" value={snapshot.totalParcels} note="This session" />
+        <KpiCard bay="02" icon="verified" tone="tertiary" label="Routed" value={snapshot.successful} note="Successfully dispatched" />
+        <KpiCard bay="03" icon="pending_actions" tone="secondary" label="Awaiting Approval" value={snapshot.pendingApproval} note="In the approval queue" />
+        <KpiCard bay="04" icon="warning" tone="error" label="Validation Errors" value={snapshot.validationErrors} note={snapshot.validationErrors > 0 ? 'Needs review' : 'None this session'} />
       </div>
 
       {attentionRequired.length > 0 && (
-        <div className="flex flex-col gap-3.5">
-          <div className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-lg bg-error/15 border border-error/30 text-error flex items-center justify-center">
-              <Icon name="error" className="text-[18px]" />
-            </span>
-            <h2 className="text-[17px] font-bold text-white tracking-tight">Needs Immediate Attention</h2>
-            <span className="px-2.5 py-0.5 rounded-full bg-error/20 border border-error/30 text-error text-[11px] font-bold tracking-wide">{attentionRequired.length} item{attentionRequired.length === 1 ? '' : 's'}</span>
+        <section className="rounded-sm border border-error/40 bg-error-container/40 overflow-hidden" aria-labelledby="attention-heading">
+          <div className="h-2 hazard-stripe-error" aria-hidden="true" />
+          <div className="p-5 flex flex-col gap-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <Icon name="warning" className="text-[22px] text-error" />
+              <h2 id="attention-heading" className="font-display font-black uppercase text-[24px] tracking-[0.03em] text-white">Needs Immediate Attention</h2>
+              <Badge tone="error">{attentionRequired.length} item{attentionRequired.length === 1 ? '' : 's'}</Badge>
+            </div>
+            <ol className="flex flex-col divide-y divide-error/20">
+              {attentionRequired.map((item, i) => (
+                <li key={i} className="flex items-start gap-4 py-3 first:pt-0 last:pb-0">
+                  <span className="font-stencil font-extrabold text-[22px] leading-none text-error w-7 shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                  <p className="text-[14px] text-on-surface leading-snug">{item}</p>
+                </li>
+              ))}
+            </ol>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {attentionRequired.map((item, i) => (
-              <div key={i} className="p-5 rounded-2xl bg-surface-container-low border border-error/25 flex items-start gap-3">
-                <span className="w-8 h-8 rounded-xl bg-error/15 border border-error/30 text-error flex items-center justify-center shrink-0">
-                  <Icon name="priority_high" className="text-[16px]" />
-                </span>
-                <p className="text-[13px] text-on-surface font-medium leading-snug pt-1">{item}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        </section>
       )}
 
       <Panel
@@ -100,21 +100,21 @@ export default function OverviewPage() {
         title="Operational Intelligence"
         actions={<Badge tone={risk.level}>{risk.level.replaceAll('_', ' ')}</Badge>}
       >
-        <p className="font-semibold text-[16px] text-white mb-1.5">{risk.title}</p>
-        <p className="text-[13px] text-on-surface-variant leading-relaxed">{risk.message}</p>
+        <p className="font-semibold text-[18px] text-white mb-1.5">{risk.title}</p>
+        <p className="text-[14px] text-on-surface-variant leading-relaxed">{risk.message}</p>
         {risk.evidence.length > 0 && (
           <ul className="mt-3 flex flex-col gap-1.5">
             {risk.evidence.map((e, i) => (
-              <li key={i} className="text-[13px] text-on-surface-variant flex items-start gap-2">
-                <span className="w-1 h-1 rounded-full bg-on-surface-variant mt-2 shrink-0" />
+              <li key={i} className="text-[14px] text-on-surface-variant flex items-start gap-2">
+                <span className="w-1.5 h-1.5 bg-primary/70 mt-2 shrink-0" />
                 {e}
               </li>
             ))}
           </ul>
         )}
-        <div className="mt-4 p-3.5 rounded-xl bg-surface-container/70 border border-white/[0.08] flex items-center justify-between gap-3 shadow-inner">
-          <span className="text-[12px] text-on-surface font-bold uppercase tracking-wide shrink-0">Next Step</span>
-          <span className="text-[13px] text-primary text-right font-medium">{risk.recommendation}</span>
+        <div className="mt-4 border-l-[3px] border-primary bg-surface-container-lowest px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <span className="font-mono text-[10px] text-primary uppercase tracking-[0.14em] shrink-0">Next step</span>
+          <span className="text-[14px] text-on-surface sm:text-right">{risk.recommendation}</span>
         </div>
       </Panel>
 

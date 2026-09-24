@@ -2,14 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Depot signage palette: warm charcoal floor, safety-amber signage, painted floor-marking green, hazard red. RGB channels for Tailwind alpha. */
+:root {
+  --c-surface: 19 18 16;
+  --c-surface-container-lowest: 12 11 10;
+  --c-surface-container-low: 27 25 22;
+  --c-surface-container: 34 32 28;
+  --c-surface-container-high: 43 40 35;
+  --c-surface-container-highest: 54 50 44;
+  --c-on-surface: 236 229 214;
+  --c-on-surface-variant: 164 156 140;
+  --c-outline-variant: 74 69 60;
+  --c-primary: 255 178 0;
+  --c-primary-fixed-dim: 232 160 0;
+  --c-on-primary: 26 18 0;
+  --c-secondary: 150 176 198;
+  --c-secondary-container: 38 52 66;
+  --c-tertiary: 124 207 120;
+  --c-error: 255 103 72;
+  --c-error-container: 72 24 16;
+  --c-on-error: 36 8 0;
+  --c-white: 246 240 227;
+}
+
 @layer base {
   html, body { margin: 0; padding: 0; }
+  body { background: rgb(var(--c-surface)); color: rgb(var(--c-on-surface)); }
+  ::selection { background: rgb(var(--c-primary)); color: rgb(var(--c-on-primary)); }
   body { overscroll-behavior: none; }
   main > :first-child { margin-top: 0 !important; }
   main > :last-child { margin-bottom: 0 !important; }
 }
 
 ::-webkit-scrollbar { display: none; }
+
+/* Sodium-lamp glow over a concrete floor with painted bay grid; fades out toward the bottom so it never fights content. */
+.depot-floor {
+  background:
+    radial-gradient(ellipse 70% 45% at 55% -8%, rgb(var(--c-primary) / 0.07), transparent 70%),
+    linear-gradient(rgb(var(--c-on-surface) / 0.035) 1px, transparent 1px) 0 0 / 64px 64px,
+    linear-gradient(90deg, rgb(var(--c-on-surface) / 0.035) 1px, transparent 1px) 0 0 / 64px 64px;
+  mask-image: linear-gradient(to bottom, black 0%, black 35%, transparent 90%);
+}
+
+/* Reserved for things that need a human now: hazard tape, not decoration. */
+.hazard-stripe {
+  background: repeating-linear-gradient(-45deg, rgb(var(--c-primary)) 0 8px, rgb(var(--c-surface-container-lowest)) 8px 16px);
+}
+.hazard-stripe-error {
+  background: repeating-linear-gradient(-45deg, rgb(var(--c-error)) 0 8px, rgb(var(--c-surface-container-lowest)) 8px 16px);
+}
+
+/* One orchestrated reveal per page: each top-level section rises in turn as it mounts. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.page-reveal > * > * { animation: rise 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.page-reveal > * > *:nth-child(2) { animation-delay: 70ms; }
+.page-reveal > * > *:nth-child(3) { animation-delay: 140ms; }
+.page-reveal > * > *:nth-child(4) { animation-delay: 210ms; }
+.page-reveal > * > *:nth-child(5) { animation-delay: 280ms; }
+.page-reveal > * > *:nth-child(n + 6) { animation-delay: 350ms; }
+.kpi-grid > * { animation: rise 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.kpi-grid > *:nth-child(2) { animation-delay: 60ms; }
+.kpi-grid > *:nth-child(3) { animation-delay: 120ms; }
+.kpi-grid > *:nth-child(4) { animation-delay: 180ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .page-reveal > * > *, .kpi-grid > * { animation: none; }
+}
 
 /* Google's required base rule for the Material Symbols ligature font to render as icons instead of literal text. */
 .material-symbols-outlined {

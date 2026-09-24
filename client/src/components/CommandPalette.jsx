@@ -41,7 +41,7 @@ export default function CommandPalette({ groups, onNavigate, onClose }) {
       transition={PALETTE_SPRING}
     >
       <motion.div
-        className="w-full max-w-xl rounded-2xl bg-surface-container-low/90 backdrop-blur-xl border border-white/[0.1] shadow-2xl overflow-hidden"
+        className="w-full max-w-xl rounded-2xl bg-surface-container-low border border-white/[0.1] border-t-[3px] border-t-primary shadow-2xl overflow-hidden"
         style={{ transformOrigin: 'top center' }}
         initial={hidden}
         animate={shown}

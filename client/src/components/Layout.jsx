@@ -109,11 +109,7 @@ export default function Layout({ children }) {
     <div className="bg-surface text-on-surface font-sans text-body-regular min-h-screen relative">
       <a className="sr-only focus:not-sr-only focus:fixed focus:left-0 focus:top-0 focus:z-[200] focus:bg-primary focus:text-on-primary focus:px-space-md focus:py-space-xs" href="#main-content">Skip to content</a>
 
-      {/* Ambient background mesh */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute -top-40 -left-20 w-[550px] h-[550px] bg-primary/5 rounded-full blur-[130px] opacity-50" />
-        <div className="absolute top-[28%] right-[-100px] w-[600px] h-[600px] bg-secondary-container/10 rounded-full blur-[140px] opacity-40" />
-      </div>
+      <div className="fixed inset-0 pointer-events-none z-0 depot-floor" aria-hidden="true" />
 
       {!isDesktop && (
         <motion.div
@@ -144,42 +140,44 @@ export default function Layout({ children }) {
         inert={drawerParked ? '' : undefined}
       >
         <div className="flex flex-col overflow-y-auto">
-          <div className="h-16 px-4 flex items-center gap-3 border-b border-white/[0.06] bg-surface-container-lowest shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary">
-              <Icon name="hub" className="text-[22px]" />
+          <div className="bg-surface-container-lowest shrink-0">
+            <div className="h-16 px-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-sm bg-primary flex items-center justify-center text-on-primary">
+                <Icon name="hub" className="text-[24px]" />
+              </div>
+              <div className="flex flex-col min-w-0 leading-none">
+                <span className="font-display font-black text-[24px] tracking-[0.04em] text-white truncate uppercase">ParcelFlow</span>
+                <span className="font-mono text-[10px] text-on-surface-variant tracking-[0.14em] uppercase mt-1">Control Room · Dock 02</span>
+              </div>
             </div>
-            <div className="flex flex-col min-w-0">
-              <span className="font-bold text-[16px] tracking-tight text-white truncate">PARCELFLOW</span>
-              <span className="font-mono text-[10px] text-on-surface-variant/80 tracking-wider uppercase font-semibold">Control Room // V2</span>
-            </div>
+            <div className="h-1.5 hazard-stripe" />
           </div>
-          <div className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60 flex items-center justify-between">
-            <span>Session</span>
+          <div className="px-5 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-on-surface-variant flex items-center justify-between">
+            <span>Shift</span>
             <span className="inline-flex items-center gap-1.5 text-tertiary">
-              <span className="w-1.5 h-1.5 rounded-full bg-tertiary" />
-              Active
+              <span className="w-1.5 h-1.5 bg-tertiary" />
+              On duty
             </span>
           </div>
-          <nav className="flex flex-col px-3 gap-1">
+          <nav className="flex flex-col px-3 gap-0.5">
             {NAV.map((group) => (
               <div key={group.label}>
-                <span className="block px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60">{group.label}</span>
+                <span className="block px-3 pt-4 pb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-on-surface-variant/70">{group.label}</span>
                 {group.items.map((item) => (
                   <NavLink
                     key={item.to}
                     to={item.to}
                     end={item.to === '/'}
-                    className={({ isActive }) => `group flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] transition-colors border ${
+                    className={({ isActive }) => `group relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-sm text-[14px] transition-colors ${
                       isActive
-                        ? 'bg-primary/15 text-primary border-primary/25 font-semibold'
-                        : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container/70 active:bg-surface-container-high border-transparent hover:border-white/[0.05] font-medium'
+                        ? "bg-surface-container-high text-white font-semibold before:content-[''] before:absolute before:left-0 before:inset-y-1 before:w-[3px] before:bg-primary"
+                        : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container active:bg-surface-container-high font-medium'
                     }`}
                   >
                     {({ isActive }) => (
                       <>
-                        <Icon name={item.icon} className={`text-[20px] ${isActive ? '' : 'text-on-surface-variant group-hover:text-primary transition-colors'}`} />
+                        <Icon name={item.icon} className={`text-[20px] ${isActive ? 'text-primary' : 'text-on-surface-variant group-hover:text-on-surface transition-colors'}`} />
                         <span className="truncate">{item.label}</span>
-                        {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
                       </>
                     )}
                   </NavLink>
@@ -188,16 +186,13 @@ export default function Layout({ children }) {
             ))}
           </nav>
         </div>
-        <button className="m-3 p-3.5 rounded-2xl border border-white/[0.08] bg-surface-container-lowest hover:bg-surface-container active:bg-surface-container-high flex items-center gap-3 text-left transition-colors" type="button" onClick={logout} title="Sign out">
-          <div className="relative shrink-0">
-            <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-[12px]">
-              {initials}
-            </div>
-            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-tertiary ring-2 ring-surface-container-lowest" />
+        <button className="m-3 p-3 rounded-sm border border-white/[0.08] bg-surface-container-lowest hover:bg-surface-container active:bg-surface-container-high flex items-center gap-3 text-left transition-colors" type="button" onClick={logout} title="Sign out">
+          <div className="w-9 h-9 rounded-sm bg-surface-container-high border border-white/[0.1] flex items-center justify-center text-primary font-display font-extrabold text-[15px] shrink-0">
+            {initials}
           </div>
           <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-bold text-on-surface truncate">{identity.name || identity.actor}</span>
-            <span className="block text-[11px] font-medium text-on-surface-variant/80 uppercase truncate">{identity.role} &middot; sign out</span>
+            <span className="block text-[14px] font-semibold text-on-surface truncate">{identity.name || identity.actor}</span>
+            <span className="block font-mono text-[10px] tracking-[0.1em] text-on-surface-variant uppercase truncate">{identity.role} · sign out</span>
           </span>
         </button>
       </motion.aside>
@@ -213,7 +208,7 @@ export default function Layout({ children }) {
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
-                className="w-full text-left pl-9 pr-12 py-1.5 rounded-xl bg-surface-container/60 hover:bg-surface-container border border-white/[0.08] focus:border-primary/60 text-on-surface-variant/70 text-[13px] transition-all"
+                className="w-full text-left pl-9 pr-12 py-1.5 rounded-sm bg-surface-container-lowest/70 hover:bg-surface-container border border-white/[0.08] focus:border-primary/60 text-on-surface-variant text-[13px] transition-colors"
               >
                 Search pages, incidents, policy...
               </button>
@@ -221,38 +216,35 @@ export default function Layout({ children }) {
             </div>
           </div>
           <div className="flex flex-col min-w-0 flex-1 items-center text-center sm:hidden">
-            <span className="text-[15px] font-bold text-on-surface truncate">{current?.label || 'ParcelFlow'}</span>
+            <span className="font-display font-extrabold uppercase tracking-[0.04em] text-[18px] text-on-surface truncate">{current?.label || 'ParcelFlow'}</span>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <div className="hidden sm:flex items-center gap-3 pl-1.5">
-              <div className="relative">
-                <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-[12px]">
-                  {initials}
-                </div>
-                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-tertiary ring-2 ring-surface" />
+              <div className="flex flex-col text-right">
+                <span className="text-[14px] font-semibold text-on-surface leading-tight truncate max-w-[160px]">{identity.name || identity.actor}</span>
+                <span className="font-mono text-[10px] tracking-[0.1em] text-primary leading-tight uppercase">{identity.role}</span>
               </div>
-              <div className="flex flex-col text-left">
-                <span className="text-[13px] font-bold text-on-surface leading-tight truncate max-w-[140px]">{identity.name || identity.actor}</span>
-                <span className="text-[11px] font-medium text-on-surface-variant/80 leading-tight">{identity.role}</span>
+              <div className="w-8 h-8 rounded-sm bg-surface-container-high border border-white/[0.1] flex items-center justify-center text-primary font-display font-extrabold text-[14px]">
+                {initials}
               </div>
             </div>
           </div>
         </header>
 
         <main className="w-full pt-14 pb-12 bg-transparent px-4 sm:px-6 min-h-screen" id="main-content">
-          <div className="max-w-7xl mx-auto py-5 flex flex-col gap-6">
+          <div key={location.pathname} className="page-reveal max-w-7xl mx-auto py-6 flex flex-col gap-6">
             {children}
           </div>
         </main>
 
         <footer className="fixed bottom-0 left-0 lg:left-64 right-0 h-8 bg-surface-container-lowest/90 backdrop-blur-xl border-t border-white/[0.08] z-30 flex items-center justify-between px-6 font-mono text-[11px]">
           <div className="flex items-center gap-2 text-on-surface-variant min-w-0">
-            <span className="w-2 h-2 rounded-full bg-tertiary shrink-0" />
+            <span className="w-2 h-2 bg-tertiary shrink-0" />
             <span className="text-white font-bold shrink-0">ParcelFlow</span>
-            <span className="text-white/20 hidden sm:inline">&bull;</span>
+            <span className="text-white/20 hidden sm:inline">/</span>
             <span className="text-on-surface-variant/90 truncate hidden sm:inline">Signed in as {identity.name || identity.actor}</span>
           </div>
-          <span className="text-on-surface-variant/70 shrink-0">{identity.role}</span>
+          <span className="text-primary tracking-[0.1em] shrink-0">{identity.role}</span>
         </footer>
       </div>
 

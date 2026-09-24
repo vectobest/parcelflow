@@ -1,9 +1,9 @@
-const controlClass = 'w-full bg-surface-container/60 hover:bg-surface-container rounded-xl border border-white/[0.08] focus:border-primary/60 text-on-surface font-code-sm text-code-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50 transition-all';
+const controlClass = 'w-full bg-surface-container-lowest rounded-sm border border-white/[0.1] hover:border-white/[0.18] focus:border-primary text-on-surface font-mono text-[13px] px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 transition-colors';
 
 export function Field({ label, htmlFor, children }) {
   return (
     <div>
-      {label && <label htmlFor={htmlFor} className="block text-[11px] font-bold uppercase tracking-widest text-on-surface-variant/70 mb-1.5">{label}</label>}
+      {label && <label htmlFor={htmlFor} className="block font-mono text-[10px] uppercase tracking-[0.14em] text-on-surface-variant mb-1.5">{label}</label>}
       {children}
     </div>
   );

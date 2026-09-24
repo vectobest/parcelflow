@@ -3,15 +3,13 @@ import { useAuth } from '../state/AuthContext.jsx';
 import { useToast } from '../state/ToastContext.jsx';
 import Icon from '../components/Icon.jsx';
 import Button from '../components/Button.jsx';
+import { Field, Input, Select } from '../components/Field.jsx';
 
 const ROLES = [
   { value: 'OPERATOR', label: 'Operator -- route parcels, upload batches, retry failures' },
   { value: 'REVIEWER', label: 'Reviewer -- also approves insurance holds' },
   { value: 'ADMIN', label: 'Admin -- also manages policies, drills, users and audit' }
 ];
-
-const inputClass = 'w-full bg-surface-container/60 rounded-xl border border-white/[0.08] text-on-surface font-code-sm text-code-sm px-3 py-2 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all';
-const labelClass = 'block text-[11px] font-bold uppercase tracking-widest text-on-surface-variant/70 mb-1.5';
 
 export default function LoginPage() {
   const { oauthEnabled, loginWithGoogle, devLogin } = useAuth();
@@ -35,53 +33,49 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-surface text-on-surface font-sans flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute -top-40 -left-20 w-[550px] h-[550px] bg-primary/5 rounded-full blur-[130px] opacity-50" />
-        <div className="absolute top-[28%] right-[-100px] w-[600px] h-[600px] bg-secondary-container/10 rounded-full blur-[140px] opacity-40" />
-      </div>
-      <div className="w-full max-w-sm rounded-2xl bg-surface-container-low/90 backdrop-blur-xl border border-white/[0.08] shadow-xl relative z-10">
-        <div className="h-16 px-4 flex items-center gap-3 border-b border-white/[0.06] bg-surface-container-lowest/70 rounded-t-2xl">
-          <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary">
-            <Icon name="hub" className="text-[22px]" />
+      <div className="fixed inset-0 pointer-events-none z-0 depot-floor" aria-hidden="true" />
+      <div className="w-full max-w-md relative z-10">
+        <div className="h-2 hazard-stripe" aria-hidden="true" />
+        <div className="bg-surface-container-low border border-t-0 border-white/[0.08] shadow-2xl">
+          <div className="px-6 pt-6 pb-5 border-b border-white/[0.06] flex items-start justify-between gap-4">
+            <div>
+              <span className="font-mono text-[10px] text-primary tracking-[0.16em] uppercase">Control Room · Dock 02</span>
+              <h1 className="font-display font-black uppercase text-[48px] leading-[0.9] tracking-[0.02em] text-white mt-2">ParcelFlow</h1>
+              <p className="text-[14px] text-on-surface-variant mt-3">Sign in to route parcels, review policy and investigate incidents.</p>
+            </div>
+            <div className="w-12 h-12 rounded-sm bg-primary flex items-center justify-center text-on-primary shrink-0">
+              <Icon name="hub" className="text-[28px]" />
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-[16px] tracking-tight text-white">PARCELFLOW</span>
-            <span className="font-mono text-[10px] text-on-surface-variant/80 tracking-wider uppercase font-semibold">Control Room // V2</span>
+
+          <div className="p-6 flex flex-col gap-4">
+            {oauthEnabled ? (
+              <Button variant="primary" onClick={loginWithGoogle} type="button" className="w-full py-3">
+                <Icon name="login" className="text-[18px]" />
+                Sign in with Google
+              </Button>
+            ) : (
+              <>
+                <div className="px-4 py-3 bg-surface-container-lowest text-[13px] text-on-surface-variant border-l-[3px] border-secondary">
+                  Google OAuth isn't configured on this server, so local dev sign-in is active instead. Set <code className="font-mono text-on-surface">GOOGLE_CLIENT_ID</code> / <code className="font-mono text-on-surface">GOOGLE_CLIENT_SECRET</code> in <code className="font-mono text-on-surface">server/.env</code> to enable real Google sign-in.
+                </div>
+                <form onSubmit={handleDevLogin} className="flex flex-col gap-3">
+                  <Field label="Email" htmlFor="login-email">
+                    <Input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  </Field>
+                  <Field label="Name" htmlFor="login-name">
+                    <Input id="login-name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+                  </Field>
+                  <Field label="Role" htmlFor="login-role">
+                    <Select id="login-role" value={role} onChange={(e) => setRole(e.target.value)}>
+                      {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                    </Select>
+                  </Field>
+                  <Button type="submit" variant="primary" disabled={busy} className="w-full py-3 mt-1">{busy ? 'Signing in...' : 'Continue'}</Button>
+                </form>
+              </>
+            )}
           </div>
-        </div>
-
-        <div className="p-6 flex flex-col gap-4">
-          <p className="text-[13px] text-on-surface-variant font-medium">Sign in to route parcels, review policy and investigate incidents.</p>
-
-          {oauthEnabled ? (
-            <Button variant="primary" onClick={loginWithGoogle} type="button" className="w-full py-2.5">
-              <Icon name="login" className="text-[16px]" />
-              Sign in with Google
-            </Button>
-          ) : (
-            <>
-              <div className="p-3 rounded-xl bg-surface-container/70 text-[12px] text-on-surface-variant border-l-2 border-secondary">
-                Google OAuth isn't configured on this server, so local dev sign-in is active instead. Set <code className="text-on-surface">GOOGLE_CLIENT_ID</code> / <code className="text-on-surface">GOOGLE_CLIENT_SECRET</code> in <code className="text-on-surface">server/.env</code> to enable real Google sign-in.
-              </div>
-              <form onSubmit={handleDevLogin} className="flex flex-col gap-3">
-                <div>
-                  <label className={labelClass} htmlFor="login-email">Email</label>
-                  <input id="login-email" type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} required />
-                </div>
-                <div>
-                  <label className={labelClass} htmlFor="login-name">Name</label>
-                  <input id="login-name" type="text" className={inputClass} value={name} onChange={(e) => setName(e.target.value)} />
-                </div>
-                <div>
-                  <label className={labelClass} htmlFor="login-role">Role</label>
-                  <select id="login-role" className={inputClass} value={role} onChange={(e) => setRole(e.target.value)}>
-                    {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                  </select>
-                </div>
-                <Button type="submit" variant="primary" disabled={busy} className="w-full py-space-sm mt-space-2xs">{busy ? 'Signing in...' : 'Continue'}</Button>
-              </form>
-            </>
-          )}
         </div>
       </div>
     </div>

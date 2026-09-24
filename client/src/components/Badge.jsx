@@ -1,23 +1,28 @@
+const DANGER = 'bg-error/15 text-error border-error/50';
+const CAUTION = 'bg-primary/10 text-primary border-primary/50';
+const CLEAR = 'bg-tertiary/10 text-tertiary border-tertiary/50';
+
 const TONES = {
-  HIGH: 'bg-error-container/80 text-error border-error/40',
-  CRITICAL: 'bg-error-container/80 text-error border-error/40',
-  error: 'bg-error-container/80 text-error border-error/40',
-  rejected: 'bg-error-container/80 text-error border-error/40',
-  MEDIUM: 'bg-secondary-container/50 text-secondary border-secondary/30',
-  pending: 'bg-secondary-container/50 text-secondary border-secondary/30',
-  LOW: 'bg-tertiary/15 text-tertiary border-tertiary/30',
-  ACTIVE: 'bg-tertiary/15 text-tertiary border-tertiary/30',
-  routed: 'bg-tertiary/15 text-tertiary border-tertiary/30',
-  PROTECTED: 'bg-tertiary/15 text-tertiary border-tertiary/30',
-  HEALTHY: 'bg-tertiary/15 text-tertiary border-tertiary/30',
-  neutral: 'bg-surface-container-highest/80 text-on-surface-variant border-white/[0.08]'
+  HIGH: DANGER,
+  CRITICAL: DANGER,
+  error: DANGER,
+  rejected: DANGER,
+  MEDIUM: CAUTION,
+  pending: CAUTION,
+  LOW: CLEAR,
+  ACTIVE: CLEAR,
+  routed: CLEAR,
+  PROTECTED: CLEAR,
+  HEALTHY: CLEAR,
+  neutral: 'bg-surface-container-high text-on-surface-variant border-white/[0.12]'
 };
 
-/** Rounded pill status badge matching the design system's severity chips (error/moderate/nominal). */
+// Stencilled status tag: square corners and a status square, so state reads by shape as well as colour.
 export default function Badge({ tone, children }) {
   const classes = TONES[tone] || TONES.neutral;
   return (
-    <span className={`px-2.5 py-0.5 rounded-full border text-[11px] font-bold tracking-wide inline-block whitespace-nowrap ${classes}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-sm border font-mono text-[10px] font-semibold uppercase tracking-[0.12em] whitespace-nowrap ${classes}`}>
+      <span className="w-1.5 h-1.5 bg-current" aria-hidden="true" />
       {children}
     </span>
   );

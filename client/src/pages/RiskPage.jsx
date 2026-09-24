@@ -34,7 +34,7 @@ export default function RiskPage() {
           <ul className="mt-3 flex flex-col gap-1.5">
             {risk.evidence.map((e, i) => (
               <li key={i} className="text-[13px] text-on-surface-variant flex items-start gap-2">
-                <span className="w-1 h-1 rounded-full bg-on-surface-variant mt-2 shrink-0" />
+                <span className="w-1.5 h-1.5 bg-primary/70 mt-2 shrink-0" />
                 {e}
               </li>
             ))}
