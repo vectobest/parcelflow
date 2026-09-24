@@ -1,16 +1,22 @@
 {
-  "name": "parcel-routing-system",
-  "version": "1.0.0",
+  "name": "parcel-routing-control-room",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
   "scripts": {
-    "test": "node --test",
-    "start": "node backend/server.js"
+    "dev": "concurrently -n server,client -c green,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w client",
+    "start": "npm run start -w server",
+    "test": "npm run test -w server",
+    "test:client": "npm run test -w client"
   },
-  "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.7.0",
-    "helmet": "^8.3.0"
+  "devDependencies": {
+    "concurrently": "^9.1.0"
   }
 }

@@ -1,168 +1,159 @@
-# 🧩 Technical Assessment: Parcel Routing System
+# ParcelFlow Control Room
 
-## Overview
+A parcel routing system rebuilt as a MERN-style application (MongoDB deliberately omitted -- see [ADR-007](docs/decisions/ADR-007-in-memory-persistence.md)): **Express + Node** API, **React** client, real **Google OAuth**. It doesn't just route parcels -- it explains every decision, makes policy changes safe to evolve, and gives an operator (or an admin) the tools to investigate when something goes wrong.
 
-You are a developer at a parcel delivery company responsible for modernizing an internal parcel routing system.
+> This repository previously contained a different, vanilla-JS implementation of the same assessment brief in `backend/`/`frontend/`. It was replaced with this MERN rewrite at the user's request; the prior version remains in git history.
 
-The system processes parcels and routes them to different departments based on business rules.
+## 1. Product overview
 
-The company expects the system to:
+The system answers the questions an operations team actually asks:
 
-- Be adaptable to business changes
-- Be reliable when failures occur
-- Be safe to evolve
-- Provide sufficient visibility when something goes wrong
-- Demonstrate thoughtful engineering beyond basic coding
+- **What happened?** Every routing decision cites the rule that matched, the policy version active at the time, and the evaluated conditions ([Decision Explainability](#decision-explainability)).
+- **What needs attention?** The Overview page surfaces health, KPIs and an explicit "needs attention" list -- not just raw numbers.
+- **What if we change a rule?** [Policy Blast Radius](#policy-lifecycle--blast-radius) replays a candidate policy against every parcel actually processed, before it can go live.
+- **Can we reproduce a past decision?** [Decision Replay](#decision-replay) and the [Time Machine](#time-machine) reconstruct exactly what the system knew at any point in the session.
+- **Is something going wrong?** [Risk & Predictions](#risk--predictions-heuristic-not-ml), the [Incident Center](#incident-center), and [Failure DNA](#failure-dna) group and explain failures instead of raising one alert per parcel.
+- **What happens if volume spikes?** The [Digital Twin](#digital-twin) projects capacity impact without touching production.
+- **Is it actually secure?** The [Security Center](#security--chaos-drills) runs real attack payloads against the real security code, live, and reports whether each was blocked.
 
-You are encouraged to use AI tools during development. However, you must demonstrate ownership of the design and clearly explain your reasoning.
+## 2. Architecture at a glance
 
----
+```
+client/   React (Vite) -- pages, a small design system, AuthContext/ModeContext
+server/   Express (Node, ESM) -- domain/service layers, in-memory repositories, Passport OAuth
+```
 
-## 📦 Core Requirements
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full breakdown (module responsibilities, data flow, the domain model, and why this stayed in-memory instead of adding MongoDB).
 
-### 1. Parcel Routing
+### SOLID in practice
 
-Each parcel contains:
+- **SRP** -- `RoutingEngine` only runs rules; `PolicyService` only manages the lifecycle; `AuditService` only appends; `RetryService`, `IncidentDetectorService`, `FailureDnaService`, `DigitalTwinService` are each one concern, not folded into a god service.
+- **OCP** -- new routing rules are added via `RoutingEngine.addRule()`, no edits to the engine itself (`server/src/routing/rules/*`).
+- **LSP** -- every routing rule extends `RoutingRule` and returns a `RoutingDecision` or `null`; every repository extends its abstract base (`PolicyRepository`, `BatchRepository`, ...).
+- **ISP** -- `PolicyRepository`, `BatchRepository`, `AuditRepository` are each a 2-3 method contract, not one god repository interface.
+- **DIP** -- every service receives its dependencies through its constructor (see `server/src/container.js`, the single composition root). Nothing reaches into `process.env`, a database driver, or `fetch` directly.
 
-- Weight (kg)
-- Value (€)
-- Destination country
-- Optional additional attributes
+## 3. Running it
 
-#### Default Routing Rules
+Prerequisites: Node 20+.
 
-- Up to 1 kg → **Mail Department**
-- Up to 10 kg → **Regular Department**
-- Over 10 kg → **Heavy Department**
-- Parcels with value greater than €1,000 require **Insurance approval** before routing
+```bash
+npm install                      # installs both workspaces
+cp server/.env.example server/.env
+npm run dev                      # server on :4000, client on :5173 (concurrently)
+```
 
-#### Expectations
+Open http://localhost:5173. Without Google OAuth configured, a **local dev sign-in** stands in (pick an email + role) -- see [Authentication](#authentication--rbac). The active policy starts at `v1` (Mail <=1kg, Regular <=10kg, Heavy above; insurance approval above EUR1000).
 
-- Implement routing logic.
-- Make business rules adaptable to change.
-- Design the system so that future departments or routing conditions can be added without major refactoring.
-- Consider how rule changes could impact system correctness and safety.
+Run the test suites:
 
-> You are not given strict instructions on how to handle configuration safety — your design should account for business risks.
+```bash
+npm test              # server: 77 unit/integration/security/invariant tests (node:test)
+npm run test:client   # client: 9 component tests (vitest)
+```
 
----
+### Enabling real Google OAuth
 
-### 2. User Interface
+1. Create an OAuth 2.0 Client ID at https://console.cloud.google.com/apis/credentials (type: Web application).
+2. Authorized redirect URI: `http://localhost:4000/api/auth/google/callback`.
+3. Set `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in `server/.env`.
+4. Restart the server. The login page switches from local dev sign-in to a real "Sign in with Google" button automatically -- and **dev sign-in is refused by the server** the moment OAuth is configured (see [ADR-006](docs/decisions/ADR-006-oauth-with-dev-fallback.md)), so there's no accidental backdoor on a real deployment.
 
-Provide a simple interface that allows:
+Optionally set `ADMIN_EMAILS` / `REVIEWER_EMAILS` (comma-separated) so specific accounts get elevated roles on first sign-in; everyone else starts as `OPERATOR`.
 
-- Entering parcel data
-- Uploading batch data (JSON or XML — your choice, justify it)
-- Viewing routing outcomes clearly
+## 4. Feature tour
 
-The interface should:
+### Decision explainability
+Every routing outcome (`RoutingDecision`) carries `matchedRule`, `reason`, `evaluatedConditions`, `policyVersion` and a `timestamp` -- shown in the Intake results table and reusable everywhere a decision appears (Approvals, Replay, the Assistant).
 
-- Be usable by non-technical operators
-- Communicate decisions clearly
-- Handle large input files gracefully
-- Be responsive (if web-based)
+### Policy lifecycle & blast radius
+Policies are immutable value objects (`server/src/domain/Policy.js`) that move `DRAFT -> VALIDATED -> APPROVED -> ACTIVE -> (ROLLED_BACK)`. An `ACTIVE` policy can never be mutated -- every change is a new version. Before activating a candidate, **Policy Manager** can check:
+- **Rule conflicts** (`RuleConflictDetector`) -- overlapping weight tiers, a mail tier that can never be reached, an insurance threshold so low it swallows every other rule.
+- **Blast radius** (`PolicyBlastRadiusService`) -- replays the candidate against *every parcel actually processed this session*, not a sample, and reports how many decisions would change.
 
-Focus on clarity and usability over visual complexity.
+### Decision replay
+Pick any batch you've processed and replay it against a different policy version (**Decision Replay** page) to see exactly which parcels would be routed differently. Built on the same `RoutingEngine` as production traffic, so a replay can never drift from what actually happens.
 
----
+### Risk & Predictions (heuristic, not ML)
+`RiskService` and `FailureDnaService` are transparent statistical heuristics over the current session's batches -- rising failure rate, growing approval backlog, failure fingerprinting with a trend. They explicitly report `INSUFFICIENT_DATA` rather than inventing a signal from too little history, and every score says "heuristic," never "AI."
 
-### 3. Quality Assurance
+### Incident center
+`IncidentDetectorService` groups related failures into one incident instead of one alert per parcel, with a minimum batch size before it will ever fire (a 2-parcel test batch can't manufacture a false incident) and a likely-cause citation from Failure DNA -- called "likely cause," never "root cause," since that's what the evidence actually supports.
 
-- Include automated tests for routing logic.
-- Demonstrate how your tests protect against regressions.
-- Show how you would introduce a new rule safely.
-- Include a small example of feature development from branch to merge.
+### Digital twin
+A linear, clearly-labeled ("SIMULATION -- NOT PRODUCTION") capacity projection over volume/processing-speed/reviewer-capacity/failure-rate multipliers. Never a trained model, and says so in its own output.
 
-Also describe how you validate correctness beyond automated tests.
+### Security & chaos drills
+Admin-only, in **Security Center**:
+- The **security drill** runs 8 real hostile inputs (oversized upload, malformed XML, an XXE-shaped payload, prototype pollution, unauthorized policy activation, unauthorized approval, invalid authentication, a replayed idempotency key) against the actual `SecureBatchParser` / `AuthorizationService` / `AuthenticationService` / `IdempotencyStore` code and reports whether each was genuinely blocked -- not a scripted narrative.
+- The **chaos drill** synthesizes a failure and walks it through the real `IncidentDetectorService` and `AuditService`, tagged `drill: true` throughout, so the FAILURE -> DETECTION -> INCIDENT -> AUDIT lifecycle it demonstrates is genuine machinery -- but it never creates a real batch, policy or approval.
 
----
+### Time machine
+`SystemHistoryService` reconstructs system state (active policy, failure rate, approval queue size, open incidents) at any past timestamp, derived from the timestamps the app already recorded -- no separate snapshot store to keep in sync or drift out of.
 
-### 4. Monitoring & Reliability
+### Operations assistant
+Deliberately **not** a language model (see [AI_USAGE.md](AI_USAGE.md)): a fixed set of recognized question patterns, answered only from live application data, always citing the specific IDs it used. An unrecognized question gets an honest "I can't answer that," never a guess.
 
-Design the system so that if something goes wrong, the team is notified and there is enough information available to investigate, resolve the issue, and detect unusual patterns in parcel routing.
+### Authentication & RBAC
+Real Passport Google OAuth 2.0, session-cookie based. Three roles -- `OPERATOR`, `REVIEWER`, `ADMIN` -- enforced **server-side** in `AuthorizationService` (every controller calls `assertPermission`/`assertRole`; the client never gets to decide what it's allowed to do). Access Control (admin-only) lists everyone who has signed in and lets an admin change roles live.
 
----
+## 5. Security
 
-### 5. Security
+See [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) for the full threat model. Highlights:
 
-This application will be deployed facing the public internet. Implement appropriate measures to safeguard it.
+- **XXE / entity expansion**: `fast-xml-parser` has no DTD/entity-resolution engine at all (not just disabled by a flag), and any payload containing `<!DOCTYPE` / `<!ENTITY` is rejected outright before parsing, as a second layer.
+- **Prototype pollution**: uploaded JSON/XML is checked for `__proto__`/`constructor`/`prototype` keys before anything downstream touches it (`fast-xml-parser` itself also refuses those as tag names).
+- **Size limits**: uploads are rejected by byte size *before* parsing (`MAX_UPLOAD_BYTES`), and by record count after.
+- **RBAC**: enforced in `AuthorizationService`, called from every mutating controller and from the services themselves (defense in depth -- a controller bug can't bypass it).
+- **Rate limiting**: a stricter limiter on `/api/auth/*` than the rest of the API.
+- **Secure headers**: `helmet` with an explicit CSP; no inline scripts.
+- **No secrets in the client**: OAuth client secret, session secret and admin email allowlist all live server-side only (`server/.env`, gitignored).
+- **Audit trail**: append-only (`InMemoryAuditRepository.add` never removes or edits), admin-only to read.
+- **Error handling**: unknown errors are logged with full detail server-side but the client only ever sees a generic message + correlation ID -- never a stack trace.
 
-Consider how you would protect the system against common threats.
+Run the security drill (Security Center, as an admin) to see these controls exercised live.
 
-#### Requirements
+## 6. Testing strategy
 
-- Implement security measures in your application.
-- Be prepared to explain:
-  - What additional measures you would implement to secure the system.
-  - Why those measures are important.
+77 server tests (`npm test`, Node's built-in test runner) across `server/tests/{unit,integration,security,invariants}`:
+- **Unit**: routing engine, policy lifecycle, rule conflicts, blast radius, batching, approvals, retry classification, risk heuristics, incident detection, failure DNA, digital twin, the operations assistant.
+- **Integration** (`supertest` against the real Express app): auth flow, RBAC over HTTP, the dev-login backdoor being refused once OAuth is configured, oversized/malformed uploads rejected at the HTTP layer.
+- **Security**: XXE, prototype pollution, oversized uploads, malformed input, RBAC, the security drill itself.
+- **Invariants**: six explicitly named tests for the properties that must never break (see `server/tests/invariants/invariants.test.js`) -- an invalid parcel never routes normally, an active policy is never silently mutated, retry never double-processes, simulation never touches production state, an unauthorized role never activates a policy, every state change is audited.
 
----
+9 client tests (`npm run test:client`, Vitest + Testing Library): the sample-batch generator, the command palette's filtering, and the login flow's dev sign-in path.
 
-### 6. Debugging
+**What's not covered**: no browser-automation (Playwright/Cypress) end-to-end suite is checked in. The full click-through flow (login -> intake -> approvals -> policy lifecycle -> replay -> risk -> incidents -> digital twin -> assistant -> security drill -> audit -> access control -> command palette -> mobile layout) was verified manually via a headless-Chrome DevTools Protocol session during development, not as a repeatable CI suite -- a real next step (see [Known limitations](#8-known-limitations--future-improvements)).
 
-You will be provided with a buggy routing function during the interview.
+## 7. AI usage
 
-Be prepared to:
+See [AI_USAGE.md](AI_USAGE.md).
 
-- Identify the issue quickly
-- Explain how you reasoned about it
-- Fix it cleanly
-- Prevent similar issues in the future
+## 8. Known limitations & future improvements
 
----
+- **No database.** Explicitly requested this way (see [ADR-007](docs/decisions/ADR-007-in-memory-persistence.md)) -- all state is in-memory and lost on restart. A real deployment would swap the `InMemoryXRepository` classes for MongoDB-backed ones behind the same repository interfaces; nothing else would need to change.
+- **Risk/incident heuristics are session-scale.** They work well within one server run but have no long-term historical baseline across restarts (again, a consequence of no persistence).
+- **No E2E test automation checked in**, per the note above.
+- **The Operations Assistant's question set is fixed.** Extending it means adding a new pattern to `OperationsAssistantService`, not training anything.
+- **Digital Twin is a linear projection**, not a queueing-theory or ML model -- fine as an order-of-magnitude estimate, not a capacity-planning guarantee.
+- **Single-process rate limiting / session store.** `express-rate-limit`'s default store and `express-session`'s `MemoryStore` are per-process; a multi-instance deployment would need a shared store (Redis) for both.
+- Natural next step if this became a real product: MongoDB persistence behind the existing repository interfaces, a Redis-backed session/rate-limit store for horizontal scaling, and a checked-in Playwright E2E suite.
 
-### 7. AI Usage
+## 9. Extending the routing rules
 
-You are expected to use AI tools for at least two parts of this assignment.
+```js
+// server/src/routing/rules/ExpressCountryRule.js
+export class ExpressCountryRule extends RoutingRule {
+  evaluate(parcel, policy, context) {
+    if (parcel.destinationCountry !== 'NL') return null;
+    return RoutingDecision.routed({ policy, parcel, department: 'Express NL', matchedRule: 'EXPRESS_NL', reason: '...' });
+  }
+}
+```
 
-You must:
+```js
+// server/src/container.js
+routingEngine.addRule(new ExpressCountryRule(), { before: 'MailWeightRule' });
+```
 
-- Show the prompts you used
-- Explain what you modified and why
-- Demonstrate that you understand the generated code
-- Reflect on limitations of AI in this context
-
----
-
-## 📂 Deliverables
-
-- Production-ready application
-- You can choose any programming language
-- Tests
-- Configuration system (if used)
-- README including:
-  - Architecture decisions
-  - Trade-offs
-  - AI usage documentation
-  - How to extend the system with new routing rules
-- Short presentation (10–15 minutes)
-
----
-
-## 🎤 Interview Expectations
-
-During the interview, you should be able to:
-
-- Demo your system end-to-end
-- Modify or extend routing logic live
-- Explain design trade-offs
-- Explain how your system adapts to business change
-- Discuss how failures would be handled
-- Walk through your AI-assisted development process
-
----
-
-## 🧠 What We Are Evaluating
-
-- Engineering judgment
-- Adaptability
-- System thinking
-- Code quality
-- UX awareness
-- Testing discipline
-- Ability to reason about failure
-- Responsible use of AI tools
-
----
-
-This assessment is intentionally open-ended. There is no single correct implementation.
+No other file changes. Add a matching unit test in `server/tests/unit/routing.test.js`.

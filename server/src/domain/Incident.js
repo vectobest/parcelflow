@@ -1,0 +1,2 @@
+export const INCIDENT_STATUSES = Object.freeze(['NEW', 'ACKNOWLEDGED', 'INVESTIGATING', 'MITIGATING', 'RESOLVED']);
+export const INCIDENT_SEVERITIES = Object.freeze(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
