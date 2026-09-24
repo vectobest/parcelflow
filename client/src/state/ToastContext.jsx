@@ -15,9 +15,17 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      <div className="toasts" aria-live="polite">
+      <div className="fixed bottom-space-lg right-space-lg z-[100] flex flex-col gap-space-xs max-w-sm" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast ${t.type}`} role={t.type === 'error' ? 'alert' : 'status'}>{t.message}</div>
+          <div
+            key={t.id}
+            role={t.type === 'error' ? 'alert' : 'status'}
+            className={`px-space-md py-space-sm font-code-sm text-code-sm shadow-lg border-l-2 ${
+              t.type === 'error' ? 'bg-error-container text-error border-error' : t.type === 'warning' ? 'bg-secondary-container/40 text-secondary border-secondary' : 'bg-surface-container-high text-on-surface border-tertiary'
+            }`}
+          >
+            {t.message}
+          </div>
         ))}
       </div>
     </ToastContext.Provider>

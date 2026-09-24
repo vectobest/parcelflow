@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useApiError } from '../hooks/useApiError.js';
+import Panel from '../components/Panel.jsx';
+import Button from '../components/Button.jsx';
+import PageHeader from '../components/PageHeader.jsx';
+import { Field, Select } from '../components/Field.jsx';
+import { tableWrap, table, thead, th, tr, td } from '../components/table.js';
 
 export default function ReplayPage() {
   const [batches, setBatches] = useState([]);
@@ -34,43 +39,40 @@ export default function ReplayPage() {
   }
 
   return (
-    <div>
-      <div className="section-head"><div><h1>Decision replay</h1><p>Pick a batch you've already processed and replay it against a different policy version to see what would change. Reproducibility for safe policy evolution.</p></div></div>
+    <div className="flex flex-col gap-space-sm">
+      <PageHeader eyebrow="Reproducibility" title="Decision Replay" description="Pick a batch you've already processed and replay it against a different policy version to see what would change." />
 
-      <article className="card" style={{ marginBottom: 20 }}>
-        <div className="grid cols-2">
-          <div className="field">
-            <label>Batch</label>
-            <select value={batchId} onChange={(e) => setBatchId(e.target.value)}>
+      <Panel icon="history" title="Replay Configuration">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm mb-space-sm">
+          <Field label="Batch">
+            <Select value={batchId} onChange={(e) => setBatchId(e.target.value)}>
               <option value="">Select a batch</option>
               {batches.map((b) => <option key={b.batchId} value={b.batchId}>{b.batchId.slice(0, 8)} &middot; {b.results.length} parcels &middot; policy {b.policyVersion}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label>Replay against policy</label>
-            <select value={policyVersion} onChange={(e) => setPolicyVersion(e.target.value)}>
+            </Select>
+          </Field>
+          <Field label="Replay against policy">
+            <Select value={policyVersion} onChange={(e) => setPolicyVersion(e.target.value)}>
               {policies.map((p) => <option key={p.version} value={p.version}>{p.version} &middot; {p.state}</option>)}
-            </select>
-          </div>
+            </Select>
+          </Field>
         </div>
-        <button className="button primary" type="button" onClick={runReplay} disabled={!batchId || busy}>Replay &rarr;</button>
-      </article>
+        <Button variant="primary" onClick={runReplay} disabled={!batchId || busy}>Replay &rarr;</Button>
+      </Panel>
 
       {result && (
-        <article className="card">
-          <div className="card-head"><h3>{result.originalPolicy} &rarr; {result.replayPolicy}: {result.changed} of {result.total} parcels would change</h3></div>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Parcel</th><th>Original ({result.originalPolicy})</th><th>Replayed ({result.replayPolicy})</th></tr></thead>
+        <Panel icon="difference" title={`${result.originalPolicy} → ${result.replayPolicy}: ${result.changed} of ${result.total} would change`} bodyClassName="">
+          <div className={tableWrap}>
+            <table className={table}>
+              <thead><tr className={thead}><th className={th}>Parcel</th><th className={th}>{`Original (${result.originalPolicy})`}</th><th className={th}>{`Replayed (${result.replayPolicy})`}</th></tr></thead>
               <tbody>
                 {result.changes.slice(0, 100).map((c) => (
-                  <tr key={c.parcelId}><td className="mono">{c.parcelId}</td><td>{c.oldDecision}</td><td>{c.newDecision}</td></tr>
+                  <tr key={c.parcelId} className={tr}><td className={`${td} text-on-surface`}>{c.parcelId}</td><td className={td}>{c.oldDecision}</td><td className={td}>{c.newDecision}</td></tr>
                 ))}
-                {result.changes.length === 0 && <tr><td colSpan={3} className="muted">No decisions changed.</td></tr>}
+                {result.changes.length === 0 && <tr><td colSpan={3} className={`${td} text-on-surface-variant`}>No decisions changed.</td></tr>}
               </tbody>
             </table>
           </div>
-        </article>
+        </Panel>
       )}
     </div>
   );

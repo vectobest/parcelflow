@@ -4,6 +4,10 @@ import { useApiError } from '../hooks/useApiError.js';
 import { useToast } from '../state/ToastContext.jsx';
 import { useAuth } from '../state/AuthContext.jsx';
 import Badge from '../components/Badge.jsx';
+import Panel from '../components/Panel.jsx';
+import Button from '../components/Button.jsx';
+import PageHeader from '../components/PageHeader.jsx';
+import { Field, Input } from '../components/Field.jsx';
 
 const NEXT_ACTION = { DRAFT: ['validate', 'Validate'], VALIDATED: ['approve', 'Approve'], APPROVED: ['activate', 'Activate'], ACTIVE: ['rollback', 'Roll back'] };
 const STATE_TONE = { ACTIVE: 'LOW', DRAFT: 'MEDIUM', VALIDATED: 'MEDIUM', APPROVED: 'MEDIUM', ROLLED_BACK: 'HIGH' };
@@ -59,52 +63,58 @@ export default function PolicyManagerPage() {
   }
 
   return (
-    <div>
-      <div className="section-head"><div><h1>Policy manager</h1><p>Active policies are immutable. Changes go draft &rarr; validated &rarr; approved &rarr; active.</p></div></div>
+    <div className="flex flex-col gap-space-sm">
+      <PageHeader eyebrow="Governance" title="Policy Manager" description="Active policies are immutable. Changes go draft → validated → approved → active." />
 
       {isAdmin && (
-        <article className="card" style={{ marginBottom: 20 }}>
-          <div className="card-head"><h3>New draft (rule builder)</h3></div>
-          <form onSubmit={createDraft}>
-            <div className="grid cols-3">
-              <div className="field"><label>Version name</label><input type="text" value={draft.version} onChange={(e) => setDraft({ ...draft, version: e.target.value })} placeholder="v2" required /></div>
-              <div className="field"><label>Mail limit (kg)</label><input type="number" step="0.1" min="0" value={draft.mailWeightLimit} onChange={(e) => setDraft({ ...draft, mailWeightLimit: e.target.value })} required /></div>
-              <div className="field"><label>Regular limit (kg)</label><input type="number" step="0.1" min="0" value={draft.regularWeightLimit} onChange={(e) => setDraft({ ...draft, regularWeightLimit: e.target.value })} required /></div>
+        <Panel icon="gavel" title="New Draft (Rule Builder)">
+          <form onSubmit={createDraft} className="flex flex-col gap-space-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-sm">
+              <Field label="Version name"><Input type="text" value={draft.version} onChange={(e) => setDraft({ ...draft, version: e.target.value })} placeholder="v2" required /></Field>
+              <Field label="Mail limit (kg)"><Input type="number" step="0.1" min="0" value={draft.mailWeightLimit} onChange={(e) => setDraft({ ...draft, mailWeightLimit: e.target.value })} required /></Field>
+              <Field label="Regular limit (kg)"><Input type="number" step="0.1" min="0" value={draft.regularWeightLimit} onChange={(e) => setDraft({ ...draft, regularWeightLimit: e.target.value })} required /></Field>
             </div>
-            <div className="grid cols-3">
-              <div className="field"><label>Insurance threshold (EUR)</label><input type="number" step="1" min="0" value={draft.insuranceValueThreshold} onChange={(e) => setDraft({ ...draft, insuranceValueThreshold: e.target.value })} required /></div>
-              <div className="field"><label>Mail department name</label><input type="text" value={draft.mailName} onChange={(e) => setDraft({ ...draft, mailName: e.target.value })} required /></div>
-              <div className="field"><label>Regular department name</label><input type="text" value={draft.regularName} onChange={(e) => setDraft({ ...draft, regularName: e.target.value })} required /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-sm">
+              <Field label="Insurance threshold (EUR)"><Input type="number" step="1" min="0" value={draft.insuranceValueThreshold} onChange={(e) => setDraft({ ...draft, insuranceValueThreshold: e.target.value })} required /></Field>
+              <Field label="Mail department name"><Input type="text" value={draft.mailName} onChange={(e) => setDraft({ ...draft, mailName: e.target.value })} required /></Field>
+              <Field label="Regular department name"><Input type="text" value={draft.regularName} onChange={(e) => setDraft({ ...draft, regularName: e.target.value })} required /></Field>
             </div>
-            <button className="button primary" type="submit">Save draft</button>
+            <Button variant="primary" type="submit" className="self-start">Save Draft</Button>
           </form>
-        </article>
+        </Panel>
       )}
 
-      <div className="grid cols-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
         {policies.map((policy) => {
           const next = NEXT_ACTION[policy.state];
           const detail = details[policy.version];
           return (
-            <article className="card" key={policy.version}>
-              <div className="card-head">
-                <div><span className="eyebrow">{policy.version === active?.version ? 'Active policy' : 'Version'}</span><h3>{policy.version}</h3></div>
-                <Badge tone={STATE_TONE[policy.state]}>{policy.state}</Badge>
-              </div>
-              <p className="muted">Mail &le; {policy.mailWeightLimit}kg &middot; Regular &le; {policy.regularWeightLimit}kg &middot; Insurance &gt; &euro;{policy.insuranceValueThreshold}</p>
-              <div className="button-row">
-                <button className="button ghost small" type="button" onClick={() => inspect(policy.version)}>Check conflicts & blast radius</button>
-                {isAdmin && next && <button className="button primary small" type="button" onClick={() => runAction(policy.version, next[0])}>{next[1]}</button>}
+            <Panel
+              key={policy.version}
+              meta={policy.version === active?.version ? 'Active Policy' : 'Version'}
+              title={policy.version}
+              actions={<Badge tone={STATE_TONE[policy.state]}>{policy.state}</Badge>}
+            >
+              <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-sm">Mail &le; {policy.mailWeightLimit}kg &middot; Regular &le; {policy.regularWeightLimit}kg &middot; Insurance &gt; &euro;{policy.insuranceValueThreshold}</p>
+              <div className="flex flex-wrap gap-space-sm">
+                <Button variant="outline" size="sm" onClick={() => inspect(policy.version)}>Check Conflicts &amp; Blast Radius</Button>
+                {isAdmin && next && <Button variant="primary" size="sm" onClick={() => runAction(policy.version, next[0])}>{next[1]}</Button>}
               </div>
               {detail && (
-                <div style={{ marginTop: 12 }}>
+                <div className="mt-space-sm pt-space-sm border-t border-outline-variant">
                   {detail.conflicts.findings.length > 0 ? (
-                    <ul className="evidence">{detail.conflicts.findings.map((f, i) => <li key={i}><Badge tone={f.severity === 'ERROR' ? 'HIGH' : 'MEDIUM'}>{f.severity}</Badge> {f.message}</li>)}</ul>
-                  ) : <p className="muted">No rule conflicts detected.</p>}
-                  <p className="recommendation">{detail.blastRadius.recommendation}</p>
+                    <ul className="flex flex-col gap-space-2xs mb-space-sm">
+                      {detail.conflicts.findings.map((f, i) => (
+                        <li key={i} className="flex items-start gap-space-xs font-body-compact text-body-compact text-on-surface">
+                          <Badge tone={f.severity === 'ERROR' ? 'HIGH' : 'MEDIUM'}>{f.severity}</Badge> {f.message}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-sm">No rule conflicts detected.</p>}
+                  <div className="bg-surface-container px-space-sm py-space-2xs font-code-sm text-code-sm text-primary">{detail.blastRadius.recommendation}</div>
                 </div>
               )}
-            </article>
+            </Panel>
           );
         })}
       </div>

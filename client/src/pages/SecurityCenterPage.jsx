@@ -3,6 +3,9 @@ import { api } from '../api/client.js';
 import { useApiError } from '../hooks/useApiError.js';
 import { useAuth } from '../state/AuthContext.jsx';
 import Badge from '../components/Badge.jsx';
+import Panel from '../components/Panel.jsx';
+import Button from '../components/Button.jsx';
+import PageHeader from '../components/PageHeader.jsx';
 
 export default function SecurityCenterPage() {
   const { identity } = useAuth();
@@ -17,7 +20,13 @@ export default function SecurityCenterPage() {
     api('/drills/chaos/scenarios').then(setScenarios).catch((error) => handleError(error, 'Loading chaos scenarios'));
   }, [identity.role, handleError]);
 
-  if (identity.role !== 'ADMIN') return <div className="empty-state">Sign in as an admin to run security and chaos drills.</div>;
+  if (identity.role !== 'ADMIN') {
+    return (
+      <div className="border border-dashed border-outline-variant px-space-md py-space-xl text-center font-body-compact text-body-compact text-on-surface-variant">
+        Sign in as an admin to run security and chaos drills.
+      </div>
+    );
+  }
 
   async function runSecurityDrill() {
     setBusy(true);
@@ -34,39 +43,47 @@ export default function SecurityCenterPage() {
   }
 
   return (
-    <div>
-      <div className="section-head"><div><h1>Security center</h1><p>Admin-only. Every drill runs against real security/incident code and never touches real batches, policies or approvals.</p></div></div>
+    <div className="flex flex-col gap-space-sm">
+      <PageHeader eyebrow="Governance" title="Security Center" description="Admin-only. Every drill runs against real security/incident code and never touches real batches, policies or approvals." />
 
-      <article className="card" style={{ marginBottom: 20 }}>
-        <div className="card-head">
-          <div><span className="eyebrow">Attack simulation</span><h3>Security drill</h3></div>
-          {securityReport && <Badge tone={securityReport.status === 'PROTECTED' ? 'LOW' : 'HIGH'}>{securityReport.status}</Badge>}
-        </div>
-        <p className="muted">Runs 8 real attack scenarios (oversized upload, XXE, prototype pollution, unauthorized actions, invalid auth, replay) against the actual security code and reports whether each was genuinely blocked.</p>
-        <button className="button primary" type="button" onClick={runSecurityDrill} disabled={busy}>Run security drill &rarr;</button>
+      <Panel
+        icon="security"
+        title="Security Drill"
+        meta="Attack Simulation"
+        actions={securityReport && <Badge tone={securityReport.status === 'PROTECTED' ? 'LOW' : 'HIGH'}>{securityReport.status}</Badge>}
+      >
+        <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-sm">Runs 8 real attack scenarios (oversized upload, XXE, prototype pollution, unauthorized actions, invalid auth, replay) against the actual security code and reports whether each was genuinely blocked.</p>
+        <Button variant="primary" onClick={runSecurityDrill} disabled={busy}>Run Security Drill &rarr;</Button>
         {securityReport && (
-          <ul className="steps" style={{ marginTop: 14 }}>
+          <ul className="mt-space-sm flex flex-col gap-space-xs">
             {securityReport.results.map((r) => (
-              <li key={r.scenario}><Badge tone={r.blocked ? 'LOW' : 'HIGH'}>{r.blocked ? 'BLOCKED' : 'NOT BLOCKED'}</Badge>&nbsp;<strong className="mono">{r.scenario}</strong> &mdash; {r.detail}</li>
+              <li key={r.scenario} className="flex flex-wrap items-center gap-space-xs font-body-compact text-body-compact border-b border-outline-variant pb-space-xs last:border-b-0">
+                <Badge tone={r.blocked ? 'LOW' : 'HIGH'}>{r.blocked ? 'BLOCKED' : 'NOT BLOCKED'}</Badge>
+                <strong className="font-code-sm text-code-sm text-on-surface">{r.scenario}</strong>
+                <span className="text-on-surface-variant">&mdash; {r.detail}</span>
+              </li>
             ))}
           </ul>
         )}
-      </article>
+      </Panel>
 
-      <article className="card">
-        <div className="card-head"><div><span className="eyebrow">Failure simulation</span><h3>Chaos drill</h3></div></div>
-        <p className="muted">Synthesizes a failure and walks it through the real incident lifecycle: FAILURE &rarr; DETECTION &rarr; INCIDENT &rarr; SAFE DEGRADATION &rarr; RECOVERY &rarr; AUDIT.</p>
-        <div className="chip-row" style={{ marginBottom: 14 }}>
+      <Panel icon="local_fire_department" title="Chaos Drill" meta="Failure Simulation">
+        <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-sm">Synthesizes a failure and walks it through the real incident lifecycle: FAILURE &rarr; DETECTION &rarr; INCIDENT &rarr; SAFE DEGRADATION &rarr; RECOVERY &rarr; AUDIT.</p>
+        <div className="flex flex-wrap gap-space-xs mb-space-sm">
           {Object.entries(scenarios).map(([key, description]) => (
-            <button key={key} className="button ghost small" type="button" title={description} onClick={() => runChaosDrill(key)} disabled={busy}>{key.replaceAll('_', ' ')}</button>
+            <Button key={key} variant="outline" size="sm" title={description} onClick={() => runChaosDrill(key)} disabled={busy}>{key.replaceAll('_', ' ')}</Button>
           ))}
         </div>
         {chaosReport && (
-          <ul className="steps">
-            {chaosReport.steps.map((s, i) => <li key={i}><Badge tone="MEDIUM">{s.stage}</Badge>&nbsp;{s.detail}</li>)}
+          <ul className="flex flex-col gap-space-xs">
+            {chaosReport.steps.map((s, i) => (
+              <li key={i} className="flex items-center gap-space-xs font-body-compact text-body-compact text-on-surface border-b border-outline-variant pb-space-xs last:border-b-0">
+                <Badge tone="MEDIUM">{s.stage}</Badge> {s.detail}
+              </li>
+            ))}
           </ul>
         )}
-      </article>
+      </Panel>
     </div>
   );
 }

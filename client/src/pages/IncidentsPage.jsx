@@ -4,6 +4,9 @@ import { useApiError } from '../hooks/useApiError.js';
 import { useToast } from '../state/ToastContext.jsx';
 import { useAuth } from '../state/AuthContext.jsx';
 import Badge from '../components/Badge.jsx';
+import Panel from '../components/Panel.jsx';
+import Button from '../components/Button.jsx';
+import PageHeader from '../components/PageHeader.jsx';
 
 const NEXT_STATUS = { NEW: 'ACKNOWLEDGED', ACKNOWLEDGED: 'INVESTIGATING', INVESTIGATING: 'MITIGATING', MITIGATING: 'RESOLVED' };
 
@@ -30,25 +33,27 @@ export default function IncidentsPage() {
   }
 
   return (
-    <div>
-      <div className="section-head"><div><h1>Incident center</h1><p>Related failures are grouped into one incident instead of one alert per parcel.</p></div></div>
+    <div className="flex flex-col gap-space-sm">
+      <PageHeader eyebrow="Intelligence" title="Incident Center" description="Related failures are grouped into one incident instead of one alert per parcel." />
 
-      {incidents.length === 0 && <div className="empty-state">No incidents detected this session.</div>}
+      {incidents.length === 0 && (
+        <div className="border border-dashed border-outline-variant px-space-md py-space-xl text-center font-body-compact text-body-compact text-on-surface-variant">
+          No incidents detected this session.
+        </div>
+      )}
 
-      <div className="grid cols-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
         {incidents.map((incident) => (
-          <article className="card" key={incident.incidentId}>
-            <div className="card-head">
-              <div><span className="eyebrow">{incident.incidentId}</span><h3>{incident.status}</h3></div>
-              <Badge tone={incident.severity}>{incident.severity}</Badge>
-            </div>
-            <p className="muted">Failure rate {(incident.failureRateBefore * 100).toFixed(1)}% &rarr; {(incident.failureRateAfter * 100).toFixed(1)}% &middot; {incident.evidenceCount} related failures</p>
-            <p>{incident.likelyCause}</p>
-            <ul className="evidence">{incident.recommendedActions.map((a, i) => <li key={i}>{a}</li>)}</ul>
+          <Panel key={incident.incidentId} meta={incident.incidentId} title={incident.status} actions={<Badge tone={incident.severity}>{incident.severity}</Badge>}>
+            <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-xs">Failure rate {(incident.failureRateBefore * 100).toFixed(1)}% &rarr; {(incident.failureRateAfter * 100).toFixed(1)}% &middot; {incident.evidenceCount} related failures</p>
+            <p className="font-body-compact text-body-compact text-on-surface mb-space-sm">{incident.likelyCause}</p>
+            <ul className="flex flex-col gap-space-3xs mb-space-sm">
+              {incident.recommendedActions.map((a, i) => <li key={i} className="font-body-compact text-body-compact text-on-surface-variant">&middot; {a}</li>)}
+            </ul>
             {identity.role === 'ADMIN' && incident.status !== 'RESOLVED' && (
-              <button className="button ghost small" type="button" onClick={() => advance(incident)}>Move to {NEXT_STATUS[incident.status]}</button>
+              <Button variant="outline" size="sm" onClick={() => advance(incident)}>Move to {NEXT_STATUS[incident.status]}</Button>
             )}
-          </article>
+          </Panel>
         ))}
       </div>
     </div>

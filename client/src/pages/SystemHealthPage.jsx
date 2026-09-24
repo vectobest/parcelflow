@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useApiError } from '../hooks/useApiError.js';
+import Panel from '../components/Panel.jsx';
+import Button from '../components/Button.jsx';
+import Badge from '../components/Badge.jsx';
+import PageHeader from '../components/PageHeader.jsx';
 
 export default function SystemHealthPage() {
   const [health, setHealth] = useState(null);
@@ -20,33 +24,33 @@ export default function SystemHealthPage() {
   }
 
   return (
-    <div>
-      <div className="section-head"><div><h1>System health & time machine</h1><p>Live health plus point-in-time state reconstructed from what the system actually recorded.</p></div></div>
+    <div className="flex flex-col gap-space-sm">
+      <PageHeader eyebrow="Governance" title="System Health &amp; Time Machine" description="Live health plus point-in-time state reconstructed from what the system actually recorded." />
 
       {health && (
-        <article className="card" style={{ marginBottom: 20 }}>
-          <div className="card-head"><h3>Live health</h3></div>
-          <p>Status: <strong>{health.status}</strong> &middot; up {health.uptimeSeconds}s &middot; active policy {health.activePolicy} &middot; OAuth {health.oauthEnabled ? 'enabled' : 'not configured'}</p>
-        </article>
+        <Panel icon="monitor_heart" title="Live Health" actions={<Badge tone="LOW">{health.status}</Badge>}>
+          <p className="font-body-compact text-body-compact text-on-surface-variant">
+            Up <span className="text-on-surface font-semibold">{health.uptimeSeconds}s</span> &middot; active policy <span className="text-on-surface font-semibold">{health.activePolicy}</span> &middot; OAuth <span className="text-on-surface font-semibold">{health.oauthEnabled ? 'enabled' : 'not configured'}</span>
+          </p>
+        </Panel>
       )}
 
-      <article className="card">
-        <div className="card-head"><h3>Timeline</h3></div>
-        {timeline.length === 0 && <p className="muted">No timestamped events recorded yet.</p>}
-        <ul className="steps">
+      <Panel icon="schedule" title="Timeline">
+        {timeline.length === 0 && <p className="font-body-compact text-body-compact text-on-surface-variant">No timestamped events recorded yet.</p>}
+        <ul className="flex flex-col gap-space-xs">
           {timeline.map((event, i) => (
-            <li key={i}>
-              <button className="button ghost small" type="button" onClick={() => inspectAt(event.at)}>{new Date(event.at).toLocaleTimeString()}</button>
-              &nbsp;{event.label}
+            <li key={i} className="flex items-center gap-space-sm border-b border-outline-variant pb-space-xs last:border-b-0">
+              <Button variant="outline" size="sm" onClick={() => inspectAt(event.at)}>{new Date(event.at).toLocaleTimeString()}</Button>
+              <span className="font-body-compact text-body-compact text-on-surface">{event.label}</span>
             </li>
           ))}
         </ul>
         {state && (
-          <div className="recommendation" style={{ marginTop: 14 }}>
-            <strong>State at {new Date(at).toLocaleString()}:</strong> policy {state.activePolicy || '—'} &middot; {state.parcelsProcessed} parcels processed &middot; {(state.failureRate * 100).toFixed(1)}% failure rate &middot; {state.approvalQueueSize} in approval queue &middot; {state.openIncidents.length} open incident(s)
+          <div className="mt-space-sm bg-surface-container px-space-sm py-space-xs font-body-compact text-body-compact text-on-surface">
+            <strong className="text-primary">State at {new Date(at).toLocaleString()}:</strong> policy {state.activePolicy || '—'} &middot; {state.parcelsProcessed} parcels processed &middot; {(state.failureRate * 100).toFixed(1)}% failure rate &middot; {state.approvalQueueSize} in approval queue &middot; {state.openIncidents.length} open incident(s)
           </div>
         )}
-      </article>
+      </Panel>
     </div>
   );
 }

@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useApiError } from '../hooks/useApiError.js';
 import Badge from '../components/Badge.jsx';
+import Panel from '../components/Panel.jsx';
+import PageHeader from '../components/PageHeader.jsx';
+import { tableWrap, table, thead, th, tr, td } from '../components/table.js';
 
 const TREND_ICON = { INCREASING: '↑', STABLE: '→', DECREASING: '↓' };
 
@@ -14,40 +17,52 @@ export default function RiskPage() {
     Promise.all([api('/risk'), api('/failure-dna')]).then(([r, d]) => { setRisk(r); setDna(d); }).catch((error) => handleError(error, 'Loading risk data'));
   }, [handleError]);
 
-  if (!risk) return <p className="muted">Loading...</p>;
+  if (!risk) return <p className="font-code-sm text-code-sm text-on-surface-variant">Loading...</p>;
 
   return (
-    <div>
-      <div className="section-head"><div><h1>Risk & predictions</h1><p>Transparent heuristics over the current session's data -- not machine learning. See methodology below.</p></div></div>
+    <div className="flex flex-col gap-space-sm">
+      <PageHeader eyebrow="Intelligence" title="Risk &amp; Predictions" description="Transparent heuristics over the current session's data -- not machine learning." />
 
-      <article className="card" style={{ marginBottom: 20 }}>
-        <div className="card-head"><div><span className="eyebrow">Operational risk</span><h3>{risk.title}</h3></div><Badge tone={risk.level}>{risk.level.replaceAll('_', ' ')} &middot; {risk.confidence}% confidence</Badge></div>
-        <p className="muted">{risk.message}</p>
-        {risk.evidence.length > 0 && <ul className="evidence">{risk.evidence.map((e, i) => <li key={i}>{e}</li>)}</ul>}
-        <p className="recommendation"><strong>Recommendation:</strong> {risk.recommendation}</p>
-        <p className="muted" style={{ marginTop: 10, fontSize: 12 }}>Methodology: transparent {risk.methodology} over recent batches and the approval queue -- not machine learning.</p>
-      </article>
+      <Panel
+        icon="monitoring"
+        title="Operational Risk"
+        actions={<Badge tone={risk.level}>{`${risk.level.replaceAll('_', ' ')} · ${risk.confidence}% confidence`}</Badge>}
+      >
+        <p className="font-headline-md text-headline-md text-on-surface font-semibold mb-space-2xs">{risk.title}</p>
+        <p className="font-body-compact text-body-compact text-on-surface-variant">{risk.message}</p>
+        {risk.evidence.length > 0 && (
+          <ul className="mt-space-xs flex flex-col gap-space-3xs">
+            {risk.evidence.map((e, i) => <li key={i} className="font-body-compact text-body-compact text-on-surface-variant">&middot; {e}</li>)}
+          </ul>
+        )}
+        <div className="mt-space-sm bg-surface-container px-space-sm py-space-2xs flex items-center justify-between gap-space-sm flex-wrap">
+          <span className="font-code-sm text-code-sm text-on-surface font-bold uppercase">Recommendation</span>
+          <span className="font-code-sm text-code-sm text-primary text-right">{risk.recommendation}</span>
+        </div>
+        <p className="mt-space-sm font-kpi-micro text-kpi-micro text-on-surface-variant uppercase">Methodology: transparent {risk.methodology} over recent batches and the approval queue &mdash; not machine learning.</p>
+      </Panel>
 
-      <article className="card">
-        <div className="card-head"><h3>Failure DNA ({dna?.totalFailures ?? 0} failures fingerprinted)</h3></div>
-        {!dna || dna.categories.length === 0 ? <p className="muted">No validation failures recorded yet.</p> : (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Fingerprint</th><th>Count</th><th>Share</th><th>Trend</th></tr></thead>
+      <Panel icon="fingerprint" title={`Failure DNA (${dna?.totalFailures ?? 0} failures fingerprinted)`} bodyClassName={dna?.categories.length ? '' : 'p-space-sm'}>
+        {!dna || dna.categories.length === 0 ? (
+          <p className="font-body-compact text-body-compact text-on-surface-variant">No validation failures recorded yet.</p>
+        ) : (
+          <div className={tableWrap}>
+            <table className={table}>
+              <thead><tr className={thead}><th className={th}>Fingerprint</th><th className={th}>Count</th><th className={th}>Share</th><th className={th}>Trend</th></tr></thead>
               <tbody>
                 {dna.categories.map((c) => (
-                  <tr key={c.code}>
-                    <td className="mono">{c.code}</td>
-                    <td>{c.count}</td>
-                    <td>{(c.share * 100).toFixed(0)}%</td>
-                    <td>{TREND_ICON[c.trend]} {c.trend}</td>
+                  <tr key={c.code} className={tr}>
+                    <td className={`${td} text-on-surface`}>{c.code}</td>
+                    <td className={td}>{c.count}</td>
+                    <td className={td}>{(c.share * 100).toFixed(0)}%</td>
+                    <td className={td}>{TREND_ICON[c.trend]} {c.trend}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </article>
+      </Panel>
     </div>
   );
 }
