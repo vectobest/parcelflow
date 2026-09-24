@@ -1,45 +1,39 @@
-import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
-import { DEFAULT_POLICY } from './src/routing.js';
-import { createOperations } from './src/operations.js';
-import { createApiRouter } from './src/http/apiRouter.js';
-import { AuthenticationError } from './src/auth/authentication.js';
-import { SECURITY_HEADERS, sendJson, sendUnauthorized } from './src/http/response.js';
-import { createAsyncGate } from './src/concurrency/asyncGate.js';
+import { createServer } from 'node:http';
+import { Config } from './src/config/Config.js';
+import { createContainer } from './src/container.js';
+import { createApp } from './src/app.js';
 
-const root = fileURLToPath(new URL('../', import.meta.url));
-const port = Number(process.env.PORT || 4173);
-const startedAt = Date.now();
-const operations = createOperations();
-const requestGate = createAsyncGate({ limit: Number(process.env.API_CONCURRENCY || 8) });
-const routeApi = createApiRouter({ operations, requestGate });
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
+const projectRoot = fileURLToPath(new URL('../', import.meta.url));
+const config = new Config();
+const container = createContainer({ config });
+const app = createApp(container, { projectRoot });
+const server = createServer(app);
 
-function serveStatic(request, response, url, correlationId) {
-  const requested = url.pathname === '/' ? '/frontend/index.html' : url.pathname;
-  const filePath = normalize(join(root, requested));
-  if (!filePath.startsWith(root)) return sendJson(response, 403, { error: 'Forbidden.' }, correlationId);
-  return readFile(filePath).then((body) => {
-    response.writeHead(200, { ...SECURITY_HEADERS, 'Content-Type': types[extname(filePath)] || 'application/octet-stream', 'X-Correlation-ID': correlationId });
-    response.end(body);
+server.listen(config.port, () => {
+  container.logger.info('server_started', { port: config.port, authMode: config.authMode, nodeEnv: config.nodeEnv, activePolicy: container.policyService.activeVersion() });
+});
+
+function shutdown(signal) {
+  container.logger.info('shutdown_initiated', { signal });
+  server.close(() => {
+    container.logger.info('shutdown_complete');
+    process.exit(0);
   });
+  setTimeout(() => {
+    container.logger.error('shutdown_forced_timeout');
+    process.exit(1);
+  }, 10_000).unref();
 }
 
-createServer(async (request, response) => {
-  const correlationId = request.headers['x-correlation-id'] || randomUUID();
-  const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
-  try {
-    if (url.pathname === '/health') return sendJson(response, 200, { status: 'ok', version: '1.0.0', uptime: Math.floor((Date.now() - startedAt) / 1000) }, correlationId);
-    if (url.pathname === '/ready') return sendJson(response, 200, { status: 'ready', policy: DEFAULT_POLICY.version, components: { routing: 'ready', policyStore: 'ready', audit: 'ready' } }, correlationId);
-    if (url.pathname.startsWith('/api/')) return await routeApi(request, response, url, correlationId);
-    return await serveStatic(request, response, url, correlationId);
-  } catch (error) {
-    if (error instanceof AuthenticationError) return sendUnauthorized(response, error.message, correlationId);
-    const status = error instanceof SyntaxError || /exceeds|not authorized|not found|required|invalid|immutable|already/.test(error.message) ? 400 : 500;
-    sendJson(response, status, { error: error.message, correlationId }, correlationId);
-    console.log(JSON.stringify({ timestamp: new Date().toISOString(), level: 'error', event: 'request_failed', correlationId, path: url.pathname, error: error.message }));
-  }
-}).listen(port, () => console.log(`Parcel routing system listening on http://localhost:${port}`));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('unhandledRejection', (reason) => {
+  container.logger.error('unhandled_rejection', { reason: reason instanceof Error ? reason.message : String(reason) });
+});
+process.on('uncaughtException', (error) => {
+  container.logger.error('uncaught_exception', { error: error.message, stack: error.stack });
+  process.exit(1);
+});
+
+export { app, server, container };

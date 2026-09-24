@@ -4,62 +4,276 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'">
-  <title>Parcel routing control room</title>
+  <meta name="color-scheme" content="light dark">
+  <title>ParcelFlow Control Room</title>
   <link rel="stylesheet" href="/frontend/styles.css">
+  <script type="module" src="/frontend/app.js"></script>
 </head>
 <body>
-  <main class="app-shell">
-    <aside class="sidebar" aria-label="Primary navigation">
-      <button id="menu-toggle" class="menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false"><span></span><span></span><span></span></button>
-      <div class="brand"><span class="brand-mark">PF</span><div><strong>ParcelFlow</strong><small>Routing control room</small></div></div>
-      <button id="profile-button" class="sidebar-footer" type="button" aria-expanded="false" aria-controls="profile-menu"><span class="avatar">NK</span><div><strong>Operations Admin</strong><small>Secure session</small></div><span class="profile-status" aria-label="Profile online"></span></button>
-      <div class="nav-groups"><div class="nav-group"><div class="nav-label">Operations</div><nav class="side-nav"><a class="active" href="#overview"><span>◉</span>Overview</a><a href="#route"><span>□</span>Route parcel</a><a href="#batch"><span>↑</span>Batch intake</a><a href="#approvals"><span>!</span>Approval queue</a></nav></div>
-      <div class="nav-group"><div class="nav-label">Policy</div><nav class="side-nav"><a href="#simulator"><span>⌁</span>Impact simulator</a><a href="#dashboard"><span>↻</span>Decision replay</a></nav></div>
-      <div class="nav-group"><div class="nav-label">Observe</div><nav class="side-nav"><a href="#health"><span>♥</span>System health</a><a href="#audit-note"><span>≡</span>Audit trail</a></nav></div></div>
-      <div id="profile-menu" class="profile-menu" hidden><strong>Operations Admin</strong><span>Role: Administrator</span><button type="button" id="sign-out-button">Sign out</button></div>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">PF</span><div><strong>ParcelFlow</strong><small>Routing control room</small></div></div>
+      <nav class="side-nav" id="side-nav">
+        <span class="nav-label">Operate</span>
+        <a href="#overview" class="active"><span class="nav-icon" aria-hidden="true">◉</span>Overview</a>
+        <a href="#intake"><span class="nav-icon" aria-hidden="true">↥</span>Intake</a>
+        <a href="#outcomes"><span class="nav-icon" aria-hidden="true">▤</span>Outcomes</a>
+        <a href="#approvals"><span class="nav-icon" aria-hidden="true">✓</span>Approvals <span class="nav-badge" id="nav-approvals" hidden>0</span></a>
+        <span class="nav-label">Policy</span>
+        <a href="#simulator"><span class="nav-icon" aria-hidden="true">⌁</span>Impact simulator</a>
+        <a href="#policy"><span class="nav-icon" aria-hidden="true">⚖</span>Rules &amp; versions</a>
+        <a href="#replay"><span class="nav-icon" aria-hidden="true">↺</span>Decision replay</a>
+        <span class="nav-label">Observe</span>
+        <a href="#activity"><span class="nav-icon" aria-hidden="true">≡</span>Activity</a>
+        <a href="#audit"><span class="nav-icon" aria-hidden="true">▥</span>Audit log</a>
+      </nav>
+      <button class="identity" id="identity-button" type="button" aria-haspopup="dialog">
+        <span class="avatar" id="identity-avatar" aria-hidden="true">?</span>
+        <span class="identity-copy"><strong id="identity-name">Not signed in</strong><small id="identity-role">Choose an identity</small></span>
+      </button>
     </aside>
-    <div class="shell">
-    <header class="masthead">
-      <div><p class="eyebrow">Operations / Routing desk <span class="live-pill"><i></i> Live</span></p><h1>Move every parcel<br><em>with confidence.</em></h1><p class="lede">A calm, auditable workspace for making routing decisions at the speed of the floor.</p><nav class="quick-nav" aria-label="Control room sections"><a href="#dashboard">Dashboard</a><a href="#route">Route parcel</a><a href="#batch">Batch intake</a><a href="#approvals">Approval queue</a><a href="#health">System health</a></nav></div>
-        <div class="header-actions"><div class="policy"><span class="dot"></span><span>Policy <strong id="policy-version">v1</strong></span></div><button class="icon-button" type="button" aria-label="Notifications">♢<span class="notification-dot"></span></button></div>
-    </header>
+    <div class="scrim" id="scrim" hidden></div>
 
-      <section id="overview" class="overview" aria-labelledby="overview-title">
-        <div class="section-bar"><div><span class="eyebrow">Operations / Overview</span><h2 id="overview-title">Good morning, the floor is clear.</h2></div><span class="updated"><i></i> Live operational view</span></div>
-        <div class="kpi-grid"><button class="kpi-card" type="button" data-kpi-filter="all"><span>Parcels processed</span><strong id="kpi-total">0</strong><small>Current session</small></button><button class="kpi-card success" type="button" data-kpi-filter="routed"><span>Successful routes</span><strong id="kpi-success">0</strong><small>Ready for department</small></button><button class="kpi-card warning" type="button" data-kpi-filter="pending"><span>Pending approval</span><strong id="kpi-pending">0</strong><small>Needs reviewer attention</small></button><button class="kpi-card danger" type="button" data-kpi-filter="error"><span>Validation errors</span><strong id="kpi-errors">0</strong><small>Requires correction</small></button></div>
-        <div class="overview-lower"><section id="approvals" class="attention panel"><div class="panel-heading"><div><span class="eyebrow">Attention required</span><h3>Work that needs a decision</h3></div><span class="attention-count" id="attention-count">0</span></div><div id="attention-list" class="attention-list"><p class="empty-copy">No attention items yet. Process a parcel batch to populate the desk.</p></div></section><section class="activity panel" id="audit-note"><div class="panel-heading"><div><span class="eyebrow">Live activity</span><h3>What just happened</h3></div><span class="activity-pulse">●</span></div><div id="activity-list" class="activity-list"><p class="empty-copy">Activity appears as batches move through the system.</p></div></section></div>
-      <section id="risk-panel" class="risk-panel panel" aria-labelledby="risk-title"><div class="panel-heading"><div><span class="eyebrow">Operational intelligence</span><h3 id="risk-title">Risk &amp; predictions</h3></div><span id="risk-level" class="risk-level neutral">Checking</span></div><p id="risk-message" class="risk-message">Assessing recent processing history.</p><div id="risk-evidence" class="risk-evidence"></div><div class="risk-recommendation"><strong>Recommended action</strong><span id="risk-recommendation">Continue normal operations.</span></div></section>
+    <div class="main" id="main">
+      <header class="topbar">
+        <button class="icon-button menu-toggle" id="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">☰</button>
+        <div class="topbar-title"><span class="eyebrow">Operations · Routing desk</span><strong id="topbar-section">Overview</strong></div>
+        <div class="topbar-actions">
+          <span class="pill" id="policy-pill" title="Active routing policy">Policy <strong id="policy-version">v1</strong></span>
+          <span class="pill status" id="connection-pill" data-state="checking"><i aria-hidden="true"></i><span id="connection-text">Connecting…</span></span>
+          <button class="icon-button" id="refresh-button" type="button" aria-label="Refresh data" title="Refresh">↻</button>
+          <button class="icon-button" id="theme-button" type="button" aria-label="Toggle dark mode" title="Toggle theme">◐</button>
+        </div>
+      </header>
+
+      <section id="overview" class="section" aria-labelledby="overview-title">
+        <div class="hero">
+          <div>
+            <h1 id="overview-title">Move every parcel <em>with confidence.</em></h1>
+            <p class="lede" id="overview-lede">Load a batch or route a single parcel to see decisions, workload and risk in one place.</p>
+          </div>
+          <div class="hero-actions">
+            <button class="button primary" id="hero-sample" type="button">✦ Load sample batch</button>
+            <a class="button ghost" href="#intake">Upload a file</a>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <button class="kpi" type="button" data-kpi="total" data-filter="all"><span class="kpi-label">Parcels processed</span><strong class="kpi-value" id="kpi-total">0</strong><span class="kpi-delta" id="kpi-total-delta">This session</span><span class="kpi-spark" id="spark-total"></span></button>
+          <button class="kpi routed" type="button" data-kpi="routed" data-filter="routed"><span class="kpi-label">Routed</span><strong class="kpi-value" id="kpi-routed">0</strong><span class="kpi-delta" id="kpi-routed-delta">Ready for departments</span><span class="kpi-spark" id="spark-routed"></span></button>
+          <button class="kpi pending" type="button" data-kpi="pending" data-filter="pending"><span class="kpi-label">Awaiting approval</span><strong class="kpi-value" id="kpi-pending">0</strong><span class="kpi-delta" id="kpi-pending-delta">Insurance review</span><span class="kpi-spark" id="spark-pending"></span></button>
+          <button class="kpi error" type="button" data-kpi="error" data-filter="error"><span class="kpi-label">Validation errors</span><strong class="kpi-value" id="kpi-error">0</strong><span class="kpi-delta" id="kpi-error-delta">Needs correction</span><span class="kpi-spark" id="spark-error"></span></button>
+        </div>
+
+        <div class="grid overview-grid">
+          <article class="card">
+            <header class="card-head"><div><span class="eyebrow">Outcome mix</span><h2>Where parcels ended up</h2></div></header>
+            <div id="outcome-mix"></div>
+            <div class="mini-stats" id="mini-stats"></div>
+          </article>
+          <article class="card">
+            <header class="card-head"><div><span class="eyebrow">Department load</span><h2>Workload by destination</h2></div></header>
+            <div class="donut-wrap"><div id="department-donut"></div><div class="legend vertical" id="department-legend"></div></div>
+          </article>
+          <article class="card risk-card">
+            <header class="card-head"><div><span class="eyebrow">Operational intelligence</span><h2>Risk outlook</h2></div><span class="badge" id="risk-badge">Checking</span></header>
+            <div class="gauge-wrap" id="risk-gauge"></div>
+            <p class="risk-message" id="risk-message">Assessing recent processing history.</p>
+            <ul class="evidence" id="risk-evidence"></ul>
+            <p class="recommendation"><strong>Next step</strong><span id="risk-recommendation">Continue normal operations.</span></p>
+          </article>
+        </div>
       </section>
 
-    <section class="workspace" aria-label="Parcel routing workspace">
-      <aside id="route" class="intake panel">
-        <div class="section-heading"><span class="step">01</span><div><h2>Single parcel</h2><p>Check a parcel before it enters the flow.</p></div></div>
-        <form id="parcel-form">
-          <label>Weight <span>kg</span><input name="weight" type="number" min="0" step="0.01" value="1" required></label>
-          <label>Declared value <span>EUR</span><input name="value" type="number" min="0" step="0.01" value="0" required></label>
-          <label>Destination country <input name="destinationCountry" type="text" placeholder="NL" maxlength="80" required></label>
-          <button type="submit">Route parcel <span aria-hidden="true">↗</span></button>
-        </form>
-        <div class="divider"><span>or</span></div>
-        <div id="batch" class="drop-zone"><span class="upload-icon" aria-hidden="true">↑</span><div><h2>Drop a batch here</h2><p>JSON or XML, up to 5 MB.</p></div><label class="file-button">Browse files<input id="file-input" type="file" accept=".json,.xml,application/json,application/xml,text/xml"></label></div>
-        <p id="file-name" class="file-name">No file selected</p>
-        <button id="sample-button" class="sample-button" type="button"><span aria-hidden="true">✦</span> Load a sample batch</button>
-        <div class="rule-note"><span class="rule-mark">!</span><p><strong>Active rule set</strong><br>High-value parcels pause for insurance approval before department routing.</p></div>
-      </aside>
-
-      <section id="dashboard" class="results panel">
-        <div class="results-top"><div class="section-heading"><span class="step">02</span><div><h2>Routing outcomes</h2><p id="result-caption">Waiting for a parcel or batch.</p></div></div><button id="clear-button" class="quiet" type="button">Clear all <span aria-hidden="true">×</span></button></div>
-        <div id="summary" class="summary" hidden></div>
-        <div id="message" class="message" role="status">Results will appear here with the rule that made each decision.</div>
-        <div id="result-tools" class="result-tools" hidden><span>Show</span><button class="filter active" data-filter="all" type="button">All</button><button class="filter" data-filter="routed" type="button">Routed</button><button class="filter" data-filter="pending" type="button">Needs approval</button><button class="filter" data-filter="error" type="button">Errors</button><button id="export-button" class="export-button" type="button">Export CSV ↓</button></div>
-        <div class="table-wrap"><table><thead><tr><th>Parcel</th><th>Weight</th><th>Value</th><th>Decision</th><th>Reason</th></tr></thead><tbody id="results-body"></tbody></table></div>
-        <aside id="decision-inspector" class="decision-inspector" hidden aria-live="polite"><div class="inspector-heading"><span class="eyebrow">Decision evidence</span><button id="close-inspector" class="quiet" type="button">Close ×</button></div><div id="inspector-content"></div></aside>
+      <section id="intake" class="section" aria-labelledby="intake-title">
+        <div class="section-head"><div><span class="eyebrow">Step 1</span><h2 id="intake-title">Intake</h2><p>Route one parcel, or bring in a whole batch.</p></div></div>
+        <div class="grid intake-grid">
+          <article class="card">
+            <header class="card-head"><div><span class="eyebrow">Single parcel</span><h3>Check before it enters the flow</h3></div></header>
+            <form id="parcel-form" class="parcel-form" novalidate>
+              <label>Parcel ID <input name="id" type="text" maxlength="60" placeholder="Optional"></label>
+              <label>Weight <span class="unit">kg</span><input name="weight" type="number" min="0" step="0.01" value="1.5" required></label>
+              <label>Declared value <span class="unit">EUR</span><input name="value" type="number" min="0" step="0.01" value="120" required></label>
+              <label>Destination country <input name="destinationCountry" type="text" maxlength="80" value="NL" autocomplete="country" required></label>
+              <div class="prediction" id="prediction" aria-live="polite"></div>
+              <button class="button primary wide" type="submit">Route parcel →</button>
+            </form>
+          </article>
+          <article class="card">
+            <header class="card-head"><div><span class="eyebrow">Batch</span><h3>Upload JSON or XML</h3></div></header>
+            <label class="drop-zone" id="drop-zone">
+              <input id="file-input" type="file" accept=".json,.xml,application/json,application/xml,text/xml">
+              <span class="drop-icon" aria-hidden="true">↥</span>
+              <strong>Drop a batch file here</strong>
+              <span>or <u>browse</u> · JSON or XML up to 5 MB · 5,000 parcels max</span>
+            </label>
+            <div class="file-status" id="file-status" hidden><span id="file-name"></span><span class="progress"><i id="file-progress"></i></span></div>
+            <div class="format-help">
+              <details><summary>Expected formats</summary>
+                <pre>{ "parcels": [
+  { "id": "P-1", "weight": 2.5,
+    "value": 120, "destinationCountry": "NL" }
+] }</pre>
+                <p>XML: <code>&lt;Parcel&gt;</code> elements with <code>Weight</code>, <code>Value</code> and <code>DestinationCountry</code>.</p>
+              </details>
+            </div>
+            <button class="button ghost wide" id="sample-button" type="button">✦ Generate a 120-parcel sample batch</button>
+          </article>
+        </div>
       </section>
-    </section>
-    <section id="simulator" class="simulator panel" aria-labelledby="simulator-title"><div class="panel-heading"><div><span class="eyebrow">Safe policy evolution</span><h2 id="simulator-title">Impact simulator</h2><p>Test a candidate threshold against the current results. Nothing is activated.</p></div><span class="simulation-badge">WHAT-IF MODE</span></div><div class="simulator-controls"><label>Candidate mail limit <span>kg</span><input id="candidate-mail" type="number" min="0" step="0.1" value="1"></label><label>Candidate regular limit <span>kg</span><input id="candidate-regular" type="number" min="0" step="0.1" value="2"></label><label>Candidate insurance threshold <span>EUR</span><input id="candidate-insurance" type="number" min="0" step="1" value="800"></label><button id="simulate-button" type="button">Run simulation <span>→</span></button></div><div id="simulation-result" class="simulation-result" hidden></div></section>
-    <footer><span id="health">Changes to routing thresholds require a reviewed policy version.</span><span>System status <strong class="online">● online</strong></span></footer>
+
+      <section id="outcomes" class="section" aria-labelledby="outcomes-title">
+        <div class="section-head">
+          <div><span class="eyebrow">Step 2</span><h2 id="outcomes-title">Routing outcomes</h2><p id="outcomes-caption">Waiting for a parcel or batch.</p></div>
+          <div class="section-actions"><button class="button ghost" id="export-button" type="button" disabled>Export CSV ↓</button><button class="button ghost" id="clear-button" type="button" disabled>Clear</button></div>
+        </div>
+        <div class="notice" id="notice" role="status" hidden></div>
+        <div class="empty-state" id="outcomes-empty">
+          <span aria-hidden="true">▤</span>
+          <p>No results yet. Every decision will appear here with the rule and evidence that produced it.</p>
+          <button class="button primary" id="empty-sample" type="button">Try a sample batch</button>
+        </div>
+        <div id="outcomes-body" hidden>
+          <div class="grid chart-grid">
+            <article class="card">
+              <header class="card-head"><div><span class="eyebrow">Decision map</span><h3>Weight × value</h3></div><span class="hint">Click a dot to inspect</span></header>
+              <div class="chart-box tall" id="scatter"></div>
+            </article>
+            <article class="card">
+              <header class="card-head"><div><span class="eyebrow">Distribution</span><h3>Weight bands</h3></div></header>
+              <div class="chart-box" id="histogram"></div>
+              <div class="legend" id="band-legend"></div>
+            </article>
+          </div>
+          <article class="card table-card">
+            <div class="toolbar">
+              <div class="chips" role="group" aria-label="Filter results" id="filter-chips"></div>
+              <label class="search"><span class="visually-hidden">Search parcels</span><input id="search-input" type="search" placeholder="Search ID, country, department…"></label>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Parcel</th><th class="num">Weight</th><th class="num">Value</th><th>Country</th><th>Decision</th><th class="hide-sm">Reason</th></tr></thead>
+                <tbody id="results-body"></tbody>
+              </table>
+            </div>
+            <div class="pager" id="pager"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="approvals" class="section" aria-labelledby="approvals-title">
+        <div class="section-head"><div><span class="eyebrow">Step 3</span><h2 id="approvals-title">Insurance approvals</h2><p>High-value parcels wait here until a reviewer decides.</p></div><span class="badge warning" id="approvals-count">0 pending</span></div>
+        <div class="approval-list" id="approval-list"></div>
+      </section>
+
+      <section id="simulator" class="section" aria-labelledby="simulator-title">
+        <div class="section-head"><div><span class="eyebrow">Safe policy evolution</span><h2 id="simulator-title">Impact simulator</h2><p>Drag a threshold and watch decisions move. Nothing changes in production until a new policy version is approved.</p></div><span class="badge outline">What-if mode</span></div>
+        <div class="grid sim-grid">
+          <article class="card sim-controls">
+            <header class="card-head"><div><span class="eyebrow">Candidate policy</span><h3>Thresholds</h3></div></header>
+            <div class="slider" data-key="mailWeightLimit"><label for="sim-mail">Mail limit</label><output id="sim-mail-out"></output><input id="sim-mail" type="range" min="0.1" max="5" step="0.1"><span class="slider-base" id="sim-mail-base"></span></div>
+            <div class="slider" data-key="regularWeightLimit"><label for="sim-regular">Regular limit</label><output id="sim-regular-out"></output><input id="sim-regular" type="range" min="1" max="40" step="0.5"><span class="slider-base" id="sim-regular-base"></span></div>
+            <div class="slider" data-key="insuranceValueThreshold"><label for="sim-insurance">Insurance threshold</label><output id="sim-insurance-out"></output><input id="sim-insurance" type="range" min="100" max="5000" step="50"><span class="slider-base" id="sim-insurance-base"></span></div>
+            <p class="sim-source" id="sim-source"></p>
+            <div class="button-row">
+              <button class="button ghost" id="sim-reset" type="button">Reset</button>
+              <button class="button primary" id="sim-draft" type="button">Save as draft policy</button>
+            </div>
+          </article>
+          <div class="sim-results">
+            <div class="impact-grid" id="impact-grid"></div>
+            <div class="grid chart-grid">
+              <article class="card">
+                <header class="card-head"><div><span class="eyebrow">Decision flow</span><h3>Current → candidate</h3></div></header>
+                <div class="chart-box tall" id="sim-flow"></div>
+              </article>
+              <article class="card">
+                <header class="card-head"><div><span class="eyebrow">Department load</span><h3>Before vs after</h3></div></header>
+                <div id="sim-bars"></div>
+              </article>
+            </div>
+          </div>
+        </div>
+        <article class="card">
+          <header class="card-head"><div><span class="eyebrow">Threshold overlay</span><h3>Dashed = current, solid = candidate</h3></div><span class="hint">Ringed dots change decision</span></header>
+          <div class="chart-box tall" id="sim-scatter"></div>
+        </article>
+        <article class="card" id="sim-changes-card">
+          <header class="card-head"><div><span class="eyebrow">Changed decisions</span><h3 id="sim-changes-title">No changes</h3></div></header>
+          <div class="table-wrap"><table><thead><tr><th>Parcel</th><th class="num">Weight</th><th class="num">Value</th><th>Current</th><th>Candidate</th></tr></thead><tbody id="sim-changes"></tbody></table></div>
+        </article>
+      </section>
+
+      <section id="policy" class="section" aria-labelledby="policy-title">
+        <div class="section-head"><div><span class="eyebrow">Governance</span><h2 id="policy-title">Rules &amp; versions</h2><p>Active policies are immutable. Changes go draft → validated → approved → active.</p></div></div>
+        <div class="grid policy-grid">
+          <article class="card"><header class="card-head"><div><span class="eyebrow">Active policy</span><h3 id="policy-heading">v1</h3></div></header><div class="chart-box" id="policy-ruler"></div></article>
+          <article class="card"><header class="card-head"><div><span class="eyebrow">History</span><h3>Versions</h3></div></header><ol class="versions" id="policy-versions"></ol></article>
+        </div>
+      </section>
+
+      <section id="replay" class="section" aria-labelledby="replay-title">
+        <div class="section-head"><div><span class="eyebrow">Reproducibility</span><h2 id="replay-title">Decision replay</h2><p>Replay the last batch you processed against a different policy version to see whether any decision would change.</p></div></div>
+        <article class="card">
+          <header class="card-head"><div><span class="eyebrow">Batch</span><h3 id="replay-batch-label">No batch processed yet</h3></div></header>
+          <div class="button-row replay-controls">
+            <label class="visually-hidden" for="replay-policy">Policy version to replay against</label>
+            <select id="replay-policy"></select>
+            <button class="button primary" id="replay-run" type="button" disabled>Replay →</button>
+          </div>
+        </article>
+        <article class="card table-card" id="replay-results-card" hidden>
+          <header class="card-head"><div><span class="eyebrow">Result</span><h3 id="replay-summary">No changes</h3></div></header>
+          <div class="table-wrap"><table><thead><tr><th>Parcel</th><th>Original · <span id="replay-original-version"></span></th><th>Replayed · <span id="replay-target-version"></span></th></tr></thead><tbody id="replay-changes"></tbody></table></div>
+        </article>
+      </section>
+
+      <section id="activity" class="section" aria-labelledby="activity-title">
+        <div class="section-head"><div><span class="eyebrow">Observe</span><h2 id="activity-title">Activity</h2><p>What happened in this session, newest first.</p></div></div>
+        <article class="card"><ol class="timeline" id="timeline"></ol></article>
+      </section>
+
+      <section id="audit" class="section" aria-labelledby="audit-title">
+        <div class="section-head"><div><span class="eyebrow">Governance</span><h2 id="audit-title">Audit log</h2><p>Every policy, approval and batch action the server recorded, newest first. Visible to admins only.</p></div></div>
+        <div class="empty-state" id="audit-locked" hidden><span aria-hidden="true">▥</span><p>Sign in as an admin to view the audit trail.</p></div>
+        <article class="card table-card" id="audit-card">
+          <div class="table-wrap"><table><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Entity</th><th class="hide-sm">Correlation ID</th></tr></thead><tbody id="audit-body"></tbody></table></div>
+        </article>
+      </section>
+
+      <footer class="footer"><span id="health-text">Checking system health…</span><span>Routing thresholds change only through reviewed policy versions.</span></footer>
     </div>
-  </main>
-  <script type="module" src="/frontend/app.js"></script>
+  </div>
+
+  <aside class="drawer" id="inspector" aria-labelledby="inspector-title" hidden>
+    <header class="drawer-head"><div><span class="eyebrow">Decision evidence</span><h3 id="inspector-title">Parcel</h3></div><button class="icon-button" id="inspector-close" type="button" aria-label="Close inspector">×</button></header>
+    <div id="inspector-body"></div>
+  </aside>
+
+  <dialog id="identity-dialog" aria-labelledby="identity-title">
+    <form method="dialog" id="identity-form">
+      <h2 id="identity-title">Who is operating?</h2>
+      <p class="muted">Use the bearer token issued to you. On a local demo server you can pick a role instead.</p>
+      <fieldset class="segmented"><legend class="visually-hidden">Sign-in method</legend>
+        <label><input type="radio" name="method" value="token" checked> Access token</label>
+        <label><input type="radio" name="method" value="demo"> Demo role</label>
+      </fieldset>
+      <label data-method="token">Access token <input name="token" type="password" autocomplete="off"></label>
+      <div data-method="demo" hidden>
+        <label>Name <input name="actor" type="text" maxlength="40" value="demo-operator"></label>
+        <label>Role <select name="role"><option value="OPERATOR">Operator: route and upload</option><option value="REVIEWER">Reviewer: also approves insurance</option><option value="ADMIN">Admin: also manages policies</option></select></label>
+      </div>
+      <p class="form-error" id="identity-error" hidden></p>
+      <div class="button-row">
+        <button class="button ghost" value="signout" id="identity-signout" type="submit">Sign out</button>
+        <button class="button ghost" value="cancel" type="submit" formnovalidate>Cancel</button>
+        <button class="button primary" value="save" type="submit">Continue</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div class="chart-tooltip" id="chart-tooltip" role="tooltip" hidden></div>
 </body>
 </html>

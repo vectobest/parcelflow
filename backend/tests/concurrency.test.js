@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAsyncGate } from '../src/concurrency/asyncGate.js';
-import { createIdempotencyStore } from '../src/batches/idempotencyStore.js';
+import { AsyncGate } from '../src/concurrency/AsyncGate.js';
+import { IdempotencyStore } from '../src/batches/IdempotencyStore.js';
 
 test('async gate never exceeds its configured concurrency', async () => {
-  const gate = createAsyncGate({ limit: 2 });
+  const gate = new AsyncGate({ limit: 2 });
   let active = 0;
   let peak = 0;
   const jobs = Array.from({ length: 8 }, (_, index) => gate.run(async () => {
@@ -20,7 +20,7 @@ test('async gate never exceeds its configured concurrency', async () => {
 });
 
 test('idempotency store serializes in-flight keys and replays completed values', () => {
-  const store = createIdempotencyStore();
+  const store = new IdempotencyStore();
 
   assert.equal(store.begin('batch-1').state, 'reserved');
   assert.equal(store.begin('batch-1').state, 'in-flight');
