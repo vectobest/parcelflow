@@ -28,18 +28,23 @@ export default function RiskPage() {
         title="Operational Risk"
         actions={<div className="flex items-center gap-space-xs flex-wrap justify-end"><Badge tone={risk.source === 'gemini' ? 'LOW' : 'neutral'}>{risk.source === 'gemini' ? 'Gemini' : 'Heuristic'}</Badge><Badge tone={risk.level}>{`${risk.level.replaceAll('_', ' ')} · ${risk.confidence}% confidence`}</Badge></div>}
       >
-        <p className="font-headline-md text-headline-md text-on-surface font-semibold mb-space-2xs">{risk.title}</p>
-        <p className="font-body-compact text-body-compact text-on-surface-variant">{risk.message}</p>
+        <p className="font-semibold text-[16px] text-white mb-1.5">{risk.title}</p>
+        <p className="text-[13px] text-on-surface-variant leading-relaxed">{risk.message}</p>
         {risk.evidence.length > 0 && (
-          <ul className="mt-space-xs flex flex-col gap-space-3xs">
-            {risk.evidence.map((e, i) => <li key={i} className="font-body-compact text-body-compact text-on-surface-variant">&middot; {e}</li>)}
+          <ul className="mt-3 flex flex-col gap-1.5">
+            {risk.evidence.map((e, i) => (
+              <li key={i} className="text-[13px] text-on-surface-variant flex items-start gap-2">
+                <span className="w-1 h-1 rounded-full bg-on-surface-variant mt-2 shrink-0" />
+                {e}
+              </li>
+            ))}
           </ul>
         )}
-        <div className="mt-space-sm bg-surface-container px-space-sm py-space-2xs flex items-center justify-between gap-space-sm flex-wrap">
-          <span className="font-code-sm text-code-sm text-on-surface font-bold uppercase">Recommendation</span>
-          <span className="font-code-sm text-code-sm text-primary text-right">{risk.recommendation}</span>
+        <div className="mt-4 p-3.5 rounded-xl bg-surface-container/70 border border-white/[0.08] flex items-center justify-between gap-3 flex-wrap shadow-inner">
+          <span className="text-[12px] text-on-surface font-bold uppercase tracking-wide">Recommendation</span>
+          <span className="text-[13px] text-primary text-right font-medium">{risk.recommendation}</span>
         </div>
-        <p className="mt-space-sm font-kpi-micro text-kpi-micro text-on-surface-variant uppercase">
+        <p className="mt-3 text-[11px] text-on-surface-variant/70 uppercase tracking-wide">
           {risk.source === 'gemini'
             ? 'Detection: transparent heuristic. Wording: Gemini, grounded only in the evidence above.'
             : `Methodology: transparent ${risk.methodology || 'heuristic'} over recent batches and the approval queue — not machine learning.`}

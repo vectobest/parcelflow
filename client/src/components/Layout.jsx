@@ -53,97 +53,149 @@ export default function Layout({ children }) {
   }, []);
 
   const current = NAV.flatMap((g) => g.items).find((item) => item.to === location.pathname);
+  const initials = (identity.name || identity.actor || '?').split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
   return (
-    <div className="bg-surface text-on-surface font-body-regular text-body-regular min-h-screen">
+    <div className="bg-surface text-on-surface font-sans text-body-regular min-h-screen relative">
       <a className="sr-only focus:not-sr-only focus:fixed focus:left-0 focus:top-0 focus:z-[200] focus:bg-primary focus:text-on-primary focus:px-space-md focus:py-space-xs" href="#main-content">Skip to content</a>
+
+      {/* Ambient background mesh */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute -top-40 -left-20 w-[550px] h-[550px] bg-primary/10 rounded-full blur-[130px] opacity-70" />
+        <div className="absolute top-[28%] right-[-100px] w-[600px] h-[600px] bg-secondary-container/20 rounded-full blur-[140px] opacity-60" />
+        <div className="absolute bottom-10 left-[35%] w-[450px] h-[450px] bg-tertiary-container/15 rounded-full blur-[120px] opacity-40" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))]" />
+      </div>
 
       {menuOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMenuOpen(false)} />}
 
-      <aside className={`fixed left-0 top-0 bottom-0 w-64 bg-surface-container-low z-50 flex flex-col justify-between border-r border-outline-variant transition-transform lg:translate-x-0 ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed left-0 top-0 bottom-8 w-64 bg-surface-container-low/90 backdrop-blur-xl z-50 flex flex-col justify-between border-r border-white/[0.08] shadow-2xl transition-transform lg:translate-x-0 ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex flex-col overflow-y-auto">
-          <div className="h-14 px-space-md flex items-center gap-space-sm border-b border-outline-variant bg-surface-container-lowest shrink-0">
-            <Icon name="hub" className="text-primary text-[20px]" />
+          <div className="h-16 px-4 flex items-center gap-3 border-b border-white/[0.06] bg-surface-container-lowest/70 backdrop-blur-sm shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary/30 to-primary-container/20 border border-primary/40 flex items-center justify-center text-primary shadow-[0_0_12px_rgba(208,188,255,0.25)] transition-transform hover:scale-105">
+              <Icon name="hub" className="text-[22px]" />
+            </div>
             <div className="flex flex-col min-w-0">
-              <span className="font-headline-md text-headline-md tracking-tight text-on-surface font-bold truncate">PARCELFLOW</span>
-              <span className="font-kpi-micro text-kpi-micro text-on-surface-variant">CONTROL ROOM // V2</span>
+              <span className="font-bold text-[16px] tracking-tight bg-gradient-to-r from-white via-white to-on-surface-variant bg-clip-text text-transparent truncate">PARCELFLOW</span>
+              <span className="font-mono text-[10px] text-on-surface-variant/80 tracking-wider uppercase font-semibold">Control Room // V2</span>
             </div>
           </div>
-          <div className="px-space-md py-space-xs bg-surface-container border-b border-outline-variant flex items-center justify-between">
-            <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Session</span>
-            <span className="font-code-sm text-code-sm text-tertiary">ACTIVE</span>
+          <div className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60 flex items-center justify-between">
+            <span>Session</span>
+            <span className="inline-flex items-center gap-1.5 text-tertiary">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-tertiary" />
+              </span>
+              Active
+            </span>
           </div>
-          <nav className="flex flex-col py-space-2xs">
+          <nav className="flex flex-col px-3 gap-1">
             {NAV.map((group) => (
               <div key={group.label}>
-                <span className="block px-space-md pt-space-md pb-space-2xs font-label-caps text-label-caps uppercase text-on-surface-variant">{group.label}</span>
+                <span className="block px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60">{group.label}</span>
                 {group.items.map((item) => (
                   <NavLink
                     key={item.to}
                     to={item.to}
                     end={item.to === '/'}
-                    className={({ isActive }) => `flex items-center gap-space-sm px-space-md py-space-sm transition-colors ${
+                    className={({ isActive }) => `group flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] transition-all duration-200 border ${
                       isActive
-                        ? 'bg-surface-container-highest text-primary border-l-2 border-primary font-bold'
-                        : 'font-body-compact text-body-compact text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface border-l-2 border-transparent'
+                        ? 'bg-primary/15 text-primary border-primary/25 font-semibold shadow-[0_0_15px_rgba(208,188,255,0.12)]'
+                        : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container/70 border-transparent hover:border-white/[0.05] font-medium'
                     }`}
                   >
-                    <Icon name={item.icon} className="text-[18px]" />
-                    <span className="truncate">{item.label}</span>
+                    {({ isActive }) => (
+                      <>
+                        <Icon name={item.icon} className={`text-[20px] transition-transform group-hover:scale-110 ${isActive ? '' : 'text-on-surface-variant group-hover:text-primary transition-colors'}`} />
+                        <span className="truncate">{item.label}</span>
+                        {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
+                      </>
+                    )}
                   </NavLink>
                 ))}
               </div>
             ))}
           </nav>
         </div>
-        <button className="m-space-sm p-space-sm border border-outline-variant bg-surface-container-lowest hover:bg-surface-container flex items-center gap-space-sm text-left transition-colors" type="button" onClick={logout} title="Sign out">
-          <span className="w-8 h-8 shrink-0 bg-primary flex items-center justify-center">
-            <Icon name="person" className="text-on-primary text-[18px]" />
-          </span>
+        <button className="m-3 p-3.5 rounded-2xl border border-white/[0.08] bg-surface-container-lowest/80 backdrop-blur-md hover:bg-surface-container flex items-center gap-3 text-left transition-all shadow-inner" type="button" onClick={logout} title="Sign out">
+          <div className="relative shrink-0">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary/30 to-secondary-container/50 border border-primary/40 flex items-center justify-center text-primary font-bold text-[12px] shadow-[0_0_10px_rgba(208,188,255,0.25)]">
+              {initials}
+            </div>
+            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-tertiary ring-2 ring-surface-container-lowest" />
+          </div>
           <span className="min-w-0 flex-1">
-            <span className="block font-code-sm text-code-sm text-on-surface font-semibold truncate">{identity.name || identity.actor}</span>
-            <span className="block font-kpi-micro text-kpi-micro text-on-surface-variant uppercase">{identity.role} &middot; sign out</span>
+            <span className="block text-[13px] font-bold text-on-surface truncate">{identity.name || identity.actor}</span>
+            <span className="block text-[11px] font-medium text-on-surface-variant/80 uppercase truncate">{identity.role} &middot; sign out</span>
           </span>
         </button>
       </aside>
 
-      <div className="lg:pl-64">
-        <header className="fixed top-0 left-0 lg:left-64 right-0 h-14 bg-surface-container-low border-b border-outline-variant z-30 flex items-center justify-between px-space-md gap-space-sm">
-          <div className="flex items-center gap-space-md min-w-0">
-            <button className="lg:hidden p-space-2xs border border-outline-variant text-on-surface-variant" type="button" aria-label="Open navigation" onClick={() => setMenuOpen(true)}>
+      <div className="lg:pl-64 relative z-10">
+        <header className="fixed top-0 left-0 lg:left-64 right-0 h-14 bg-surface-container-low/80 backdrop-blur-xl border-b border-white/[0.08] z-40 flex items-center justify-between px-6 gap-3 shadow-sm">
+          <div className="flex items-center gap-4 flex-1 min-w-0 max-w-xl">
+            <button className="lg:hidden p-2 rounded-xl border border-white/[0.08] text-on-surface-variant" type="button" aria-label="Open navigation" onClick={() => setMenuOpen(true)}>
               <Icon name="menu" className="text-[18px]" />
             </button>
-            <div className="flex flex-col min-w-0">
-              <span className="font-kpi-micro text-kpi-micro uppercase text-on-surface-variant hidden sm:block">Parcel Routing Control Room</span>
-              <span className="font-headline-md text-headline-md text-on-surface font-bold truncate">{current?.label || 'ParcelFlow'}</span>
+            <div className="relative w-full max-w-md group hidden sm:block">
+              <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant/70 group-focus-within:text-primary transition-colors" />
+              <button
+                type="button"
+                onClick={() => setPaletteOpen(true)}
+                className="w-full text-left pl-9 pr-12 py-1.5 rounded-xl bg-surface-container/60 hover:bg-surface-container border border-white/[0.08] focus:border-primary/60 text-on-surface-variant/70 text-[13px] transition-all"
+              >
+                Search pages, incidents, policy...
+              </button>
+              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded-md bg-surface-container-high/80 text-[10px] font-mono text-on-surface-variant border border-white/[0.1]">&#8984;K</kbd>
             </div>
           </div>
-          <div className="flex items-center gap-space-sm shrink-0">
+          <div className="flex flex-col min-w-0 flex-1 items-center text-center sm:hidden">
+            <span className="text-[15px] font-bold text-on-surface truncate">{current?.label || 'ParcelFlow'}</span>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
             <button
-              className="hidden sm:flex items-center gap-space-xs px-space-sm py-space-2xs bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:text-on-surface transition-colors"
-              type="button"
-              onClick={() => setPaletteOpen(true)}
-            >
-              <Icon name="terminal" className="text-[16px]" />
-              <span className="font-code-sm text-code-sm">SEARCH</span>
-              <kbd className="px-space-2xs bg-surface-container font-kpi-micro text-kpi-micro border border-outline-variant text-on-surface">&#8984;K</kbd>
-            </button>
-            <button
-              className="px-space-sm py-space-2xs bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:text-on-surface font-code-sm text-code-sm uppercase transition-colors"
+              className="px-3 py-1.5 rounded-xl bg-surface-container/60 hover:bg-surface-container border border-white/[0.08] text-on-surface-variant hover:text-white text-[12px] font-semibold uppercase transition-all"
               type="button"
               onClick={toggle}
               aria-pressed={isTechnical}
             >
               {isTechnical ? 'Technical' : 'Simple'}
             </button>
+            <div className="h-5 w-px bg-white/[0.1] mx-0.5 hidden sm:block" />
+            <div className="hidden sm:flex items-center gap-3 pl-1.5">
+              <div className="relative">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary/30 to-secondary-container/50 border border-primary/40 flex items-center justify-center text-primary font-bold text-[12px] shadow-[0_0_10px_rgba(208,188,255,0.25)]">
+                  {initials}
+                </div>
+                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-tertiary ring-2 ring-surface" />
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="text-[13px] font-bold text-on-surface leading-tight truncate max-w-[140px]">{identity.name || identity.actor}</span>
+                <span className="text-[11px] font-medium text-on-surface-variant/80 leading-tight">{identity.role}</span>
+              </div>
+            </div>
           </div>
         </header>
 
-        <main className="w-full pt-14 pb-space-xl bg-surface px-space-md min-h-screen" id="main-content">
-          <div className="flex flex-col w-full max-w-[1400px] mx-auto pt-space-md">
+        <main className="w-full pt-14 pb-12 bg-transparent px-4 sm:px-6 min-h-screen" id="main-content">
+          <div className="max-w-7xl mx-auto py-5 flex flex-col gap-6">
             {children}
           </div>
         </main>
+
+        <footer className="fixed bottom-0 left-0 lg:left-64 right-0 h-8 bg-surface-container-lowest/90 backdrop-blur-xl border-t border-white/[0.08] z-30 flex items-center justify-between px-6 font-mono text-[11px]">
+          <div className="flex items-center gap-2 text-on-surface-variant min-w-0">
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-tertiary" />
+            </span>
+            <span className="text-white font-bold shrink-0">ParcelFlow</span>
+            <span className="text-white/20 hidden sm:inline">&bull;</span>
+            <span className="text-on-surface-variant/90 truncate hidden sm:inline">Signed in as {identity.name || identity.actor}</span>
+          </div>
+          <span className="text-on-surface-variant/70 shrink-0">{identity.role}</span>
+        </footer>
       </div>
 
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} onNavigate={(to) => { navigate(to); setPaletteOpen(false); }} groups={NAV} />}

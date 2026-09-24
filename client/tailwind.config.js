@@ -57,7 +57,28 @@ export default {
         DEFAULT: '0.25rem',
         lg: '0.5rem',
         xl: '0.75rem',
+        '2xl': '1rem',
+        '3xl': '1.25rem',
         full: '9999px'
+      },
+      keyframes: {
+        pulseGlow: {
+          '0%, 100%': { boxShadow: '0 0 15px -3px rgba(208, 188, 255, 0.25), 0 0 6px -2px rgba(160, 120, 255, 0.4)' },
+          '50%': { boxShadow: '0 0 25px 2px rgba(208, 188, 255, 0.45), 0 0 10px 1px rgba(160, 120, 255, 0.6)' }
+        },
+        pulseAlertGlow: {
+          '0%, 100%': { boxShadow: '0 0 14px -2px rgba(255, 100, 100, 0.2)' },
+          '50%': { boxShadow: '0 0 24px 2px rgba(255, 100, 100, 0.4)' }
+        },
+        shimmerLine: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' }
+        }
+      },
+      animation: {
+        'pulse-glow': 'pulseGlow 4s ease-in-out infinite',
+        'pulse-alert-glow': 'pulseAlertGlow 3s ease-in-out infinite',
+        'shimmer': 'shimmerLine 3s linear infinite'
       },
       spacing: {
         'space-3xs': '0.125rem',
@@ -73,16 +94,18 @@ export default {
         gutter: '0.5rem'
       },
       fontFamily: {
+        sans: ['Plus Jakarta Sans', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
         'code-sm': ['JetBrains Mono', 'monospace'],
-        'headline-lg': ['Space Grotesk', 'sans-serif'],
+        'headline-lg': ['Plus Jakarta Sans', 'sans-serif'],
         'data-lg': ['JetBrains Mono', 'monospace'],
-        'headline-md': ['Space Grotesk', 'sans-serif'],
+        'headline-md': ['Plus Jakarta Sans', 'sans-serif'],
         'kpi-micro': ['JetBrains Mono', 'monospace'],
-        'body-regular': ['JetBrains Mono', 'monospace'],
-        'display-xl-mobile': ['Space Grotesk', 'sans-serif'],
-        'body-compact': ['JetBrains Mono', 'monospace'],
-        'display-xl': ['Space Grotesk', 'sans-serif'],
-        'label-caps': ['JetBrains Mono', 'monospace']
+        'body-regular': ['Plus Jakarta Sans', 'sans-serif'],
+        'display-xl-mobile': ['Plus Jakarta Sans', 'sans-serif'],
+        'body-compact': ['Plus Jakarta Sans', 'sans-serif'],
+        'display-xl': ['Plus Jakarta Sans', 'sans-serif'],
+        'label-caps': ['Plus Jakarta Sans', 'sans-serif']
       },
       fontSize: {
         'code-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.02em', fontWeight: '500' }],

@@ -9,6 +9,11 @@
   main > :last-child { margin-bottom: 0 !important; }
 }
 
+.shimmer-progress {
+  background-size: 200% 100%;
+  animation: shimmerLine 3s linear infinite;
+}
+
 ::-webkit-scrollbar { display: none; }
 
 /* Google's required base rule for the Material Symbols ligature font to render as icons instead of literal text. */

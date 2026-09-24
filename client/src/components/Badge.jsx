@@ -1,23 +1,23 @@
 const TONES = {
-  HIGH: 'bg-error-container text-error',
-  CRITICAL: 'bg-error-container text-error',
-  error: 'bg-error-container text-error',
-  rejected: 'bg-error-container text-error',
-  MEDIUM: 'bg-secondary-container/40 text-secondary',
-  pending: 'bg-secondary-container/40 text-secondary',
-  LOW: 'bg-tertiary-container/30 text-tertiary',
-  ACTIVE: 'bg-tertiary-container/30 text-tertiary',
-  routed: 'bg-tertiary-container/30 text-tertiary',
-  PROTECTED: 'bg-tertiary-container/30 text-tertiary',
-  HEALTHY: 'bg-tertiary-container/30 text-tertiary',
-  neutral: 'bg-surface-container-highest text-on-surface-variant'
+  HIGH: 'bg-error-container/80 text-error border-error/40 shadow-[0_0_10px_rgba(255,180,171,0.2)]',
+  CRITICAL: 'bg-error-container/80 text-error border-error/40 shadow-[0_0_10px_rgba(255,180,171,0.2)]',
+  error: 'bg-error-container/80 text-error border-error/40 shadow-[0_0_10px_rgba(255,180,171,0.2)]',
+  rejected: 'bg-error-container/80 text-error border-error/40 shadow-[0_0_10px_rgba(255,180,171,0.2)]',
+  MEDIUM: 'bg-secondary-container/50 text-secondary border-secondary/30',
+  pending: 'bg-secondary-container/50 text-secondary border-secondary/30',
+  LOW: 'bg-tertiary/15 text-tertiary border-tertiary/30',
+  ACTIVE: 'bg-tertiary/15 text-tertiary border-tertiary/30',
+  routed: 'bg-tertiary/15 text-tertiary border-tertiary/30',
+  PROTECTED: 'bg-tertiary/15 text-tertiary border-tertiary/30',
+  HEALTHY: 'bg-tertiary/15 text-tertiary border-tertiary/30',
+  neutral: 'bg-surface-container-highest/80 text-on-surface-variant border-white/[0.08]'
 };
 
-/** KPI-micro uppercase status badge matching the design system's severity chips (error/moderate/nominal). */
+/** Rounded pill status badge matching the design system's severity chips (error/moderate/nominal). */
 export default function Badge({ tone, children }) {
   const classes = TONES[tone] || TONES.neutral;
   return (
-    <span className={`px-space-xs py-space-3xs font-kpi-micro text-kpi-micro uppercase font-bold inline-block whitespace-nowrap ${classes}`}>
+    <span className={`px-2.5 py-0.5 rounded-full border text-[11px] font-bold tracking-wide inline-block whitespace-nowrap ${classes}`}>
       {children}
     </span>
   );

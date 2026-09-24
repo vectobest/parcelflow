@@ -5,21 +5,32 @@ import { useApiError } from '../hooks/useApiError.js';
 import Badge from '../components/Badge.jsx';
 import Panel from '../components/Panel.jsx';
 import Button from '../components/Button.jsx';
+import PageHeader from '../components/PageHeader.jsx';
 import Icon from '../components/Icon.jsx';
 
 const HEALTH_TONE = { HEALTHY: 'LOW', DEGRADED: 'MEDIUM', CRITICAL: 'HIGH' };
 
-function Stat({ label, value, tone, suffix }) {
-  const toneClass = { routed: 'text-tertiary', pending: 'text-secondary', error: 'text-error' }[tone] || 'text-on-surface';
+const KPI_STYLES = {
+  primary: { icon: 'bg-primary/15 border-primary/30 text-primary shadow-[0_0_12px_rgba(208,188,255,0.2)]', glow: 'bg-primary/10 group-hover:bg-primary/20', border: 'hover:border-primary/40 hover:shadow-primary/10', value: 'text-white' },
+  tertiary: { icon: 'bg-tertiary/15 border-tertiary/30 text-tertiary shadow-[0_0_12px_rgba(78,222,163,0.2)]', glow: 'bg-tertiary/10 group-hover:bg-tertiary/20', border: 'hover:border-tertiary/40 hover:shadow-tertiary/10', value: 'text-tertiary drop-shadow-[0_0_10px_rgba(78,222,163,0.3)]' },
+  secondary: { icon: 'bg-secondary/15 border-secondary/30 text-secondary shadow-[0_0_12px_rgba(192,193,255,0.2)]', glow: 'bg-secondary/10 group-hover:bg-secondary/20', border: 'hover:border-secondary/40 hover:shadow-secondary/10', value: 'text-white' },
+  error: { icon: 'bg-error/20 border-error/40 text-error shadow-[0_0_12px_rgba(255,180,171,0.25)]', glow: 'bg-error/15 group-hover:bg-error/25', border: 'border-error/30 hover:border-error/60 hover:shadow-error/15', value: 'text-error drop-shadow-[0_0_10px_rgba(255,180,171,0.3)]' }
+};
+
+function KpiCard({ icon, tone, label, value, note }) {
+  const s = KPI_STYLES[tone] || KPI_STYLES.primary;
   return (
-    <div className="flex flex-col">
-      <div className="flex items-center gap-space-3xs text-on-surface-variant font-kpi-micro text-kpi-micro uppercase">
-        <span className={`w-1.5 h-1.5 inline-block ${tone ? toneClass.replace('text-', 'bg-') : 'bg-primary'}`} />
-        <span>{label}</span>
+    <div className={`group p-5 rounded-2xl bg-surface-container-low/80 backdrop-blur-md border border-white/[0.08] ${s.border} transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between relative overflow-hidden`}>
+      <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl transition-all ${s.glow}`} />
+      <div className="flex items-center justify-between relative z-10">
+        <span className="text-[12px] font-semibold text-on-surface-variant tracking-wide uppercase">{label}</span>
+        <span className={`w-9 h-9 rounded-xl border flex items-center justify-center group-hover:scale-110 transition-transform ${s.icon}`}>
+          <Icon name={icon} className="text-[19px]" />
+        </span>
       </div>
-      <div className="flex items-baseline gap-space-xs">
-        <span className={`font-display-xl-mobile sm:font-data-lg text-display-xl-mobile sm:text-data-lg font-bold ${toneClass}`}>{value}</span>
-        {suffix && <span className="font-code-sm text-code-sm text-on-surface-variant">{suffix}</span>}
+      <div className="mt-4 relative z-10">
+        <div className={`font-mono text-[28px] font-bold tracking-tight ${s.value}`}>{value}</div>
+        {note && <div className="flex items-center gap-1.5 mt-1.5"><span className="text-[11px] text-on-surface-variant font-medium">{note}</span></div>}
       </div>
     </div>
   );
@@ -44,40 +55,45 @@ export default function OverviewPage() {
     return () => { cancelled = true; clearInterval(interval); };
   }, [handleError]);
 
-  if (!dashboard) return <p className="font-code-sm text-code-sm text-on-surface-variant">Loading dashboard...</p>;
+  if (!dashboard) return <p className="text-[13px] text-on-surface-variant">Loading dashboard...</p>;
   const { snapshot, risk, health, attentionRequired } = dashboard;
 
   return (
-    <div className="flex flex-col gap-space-sm">
-      <section className="bg-surface-container-low px-space-md py-space-sm">
-        <div className="flex flex-wrap items-end justify-between gap-space-md">
-          <div className="flex flex-wrap items-center gap-space-xl">
-            <Stat label="Parcels Processed" value={snapshot.totalParcels} tone="" suffix="THIS SESSION" />
-            <div className="h-8 w-px bg-outline-variant hidden sm:block" />
-            <Stat label="Routed" value={snapshot.successful} tone="routed" />
-            <div className="h-8 w-px bg-outline-variant hidden sm:block" />
-            <Stat label="Awaiting Approval" value={snapshot.pendingApproval} tone="pending" />
-            <div className="h-8 w-px bg-outline-variant hidden md:block" />
-            <Stat label="Validation Errors" value={snapshot.validationErrors} tone="error" />
-          </div>
-          <Badge tone={HEALTH_TONE[health] || 'MEDIUM'}>{health}</Badge>
-        </div>
-        <p className="mt-space-xs font-body-compact text-body-compact text-on-surface-variant">
-          Policy <span className="text-on-surface font-semibold">{snapshot.activePolicy}</span> active this session.
-        </p>
-      </section>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="Parcel Routing Control Room"
+        title="Dispatch Overview"
+        description={<>Policy <span className="text-on-surface font-semibold">{snapshot.activePolicy}</span> active this session &mdash; live routing, approvals and risk in one view.</>}
+        actions={<Badge tone={HEALTH_TONE[health] || 'MEDIUM'}>{health}</Badge>}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard icon="package_2" tone="primary" label="Parcels Processed" value={snapshot.totalParcels} note="This session" />
+        <KpiCard icon="verified" tone="tertiary" label="Routed" value={snapshot.successful} note="Successfully dispatched" />
+        <KpiCard icon="pending_actions" tone="secondary" label="Awaiting Approval" value={snapshot.pendingApproval} note="In the approval queue" />
+        <KpiCard icon="warning" tone="error" label="Validation Errors" value={snapshot.validationErrors} note={snapshot.validationErrors > 0 ? 'Needs review' : 'None this session'} />
+      </div>
 
       {attentionRequired.length > 0 && (
-        <Panel icon="warning" title="Needs Attention">
-          <ul className="flex flex-col gap-space-xs">
+        <div className="flex flex-col gap-3.5">
+          <div className="flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-lg bg-error/15 border border-error/30 text-error flex items-center justify-center shadow-[0_0_10px_rgba(255,180,171,0.2)]">
+              <Icon name="error" className="text-[18px]" />
+            </span>
+            <h2 className="text-[17px] font-bold text-white tracking-tight">Needs Immediate Attention</h2>
+            <span className="px-2.5 py-0.5 rounded-full bg-error/20 border border-error/30 text-error text-[11px] font-bold tracking-wide animate-pulse">{attentionRequired.length} item{attentionRequired.length === 1 ? '' : 's'}</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {attentionRequired.map((item, i) => (
-              <li key={i} className="flex items-start gap-space-xs font-body-compact text-body-compact text-on-surface">
-                <span className="w-1.5 h-1.5 mt-1.5 bg-secondary inline-block shrink-0" />
-                {item}
-              </li>
+              <div key={i} className="p-5 rounded-2xl bg-surface-container-low/90 backdrop-blur-md border border-error/25 hover:border-error/50 transition-all duration-300 flex items-start gap-3">
+                <span className="w-8 h-8 rounded-xl bg-error/15 border border-error/30 text-error flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(255,180,171,0.15)]">
+                  <Icon name="priority_high" className="text-[16px]" />
+                </span>
+                <p className="text-[13px] text-on-surface font-medium leading-snug pt-1">{item}</p>
+              </div>
             ))}
-          </ul>
-        </Panel>
+          </div>
+        </div>
       )}
 
       <Panel
@@ -85,23 +101,26 @@ export default function OverviewPage() {
         title="Operational Intelligence"
         actions={<Badge tone={risk.level}>{risk.level.replaceAll('_', ' ')}</Badge>}
       >
-        <p className="font-headline-md text-headline-md text-on-surface font-semibold mb-space-2xs">{risk.title}</p>
-        <p className="font-body-compact text-body-compact text-on-surface-variant">{risk.message}</p>
+        <p className="font-semibold text-[16px] text-white mb-1.5">{risk.title}</p>
+        <p className="text-[13px] text-on-surface-variant leading-relaxed">{risk.message}</p>
         {risk.evidence.length > 0 && (
-          <ul className="mt-space-xs flex flex-col gap-space-3xs">
+          <ul className="mt-3 flex flex-col gap-1.5">
             {risk.evidence.map((e, i) => (
-              <li key={i} className="font-body-compact text-body-compact text-on-surface-variant">&middot; {e}</li>
+              <li key={i} className="text-[13px] text-on-surface-variant flex items-start gap-2">
+                <span className="w-1 h-1 rounded-full bg-on-surface-variant mt-2 shrink-0" />
+                {e}
+              </li>
             ))}
           </ul>
         )}
-        <div className="mt-space-sm bg-surface-container px-space-sm py-space-2xs flex items-center justify-between">
-          <span className="font-code-sm text-code-sm text-on-surface font-bold uppercase">Next Step</span>
-          <span className="font-code-sm text-code-sm text-primary text-right">{risk.recommendation}</span>
+        <div className="mt-4 p-3.5 rounded-xl bg-surface-container/70 border border-white/[0.08] flex items-center justify-between gap-3 shadow-inner">
+          <span className="text-[12px] text-on-surface font-bold uppercase tracking-wide shrink-0">Next Step</span>
+          <span className="text-[13px] text-primary text-right font-medium">{risk.recommendation}</span>
         </div>
       </Panel>
 
-      <div className="flex flex-wrap gap-space-sm">
-        <Link to="/intake"><Button variant="primary"><Icon name="upload" className="text-[16px]" />Route a Parcel or Batch</Button></Link>
+      <div className="flex flex-wrap gap-3">
+        <Link to="/intake"><Button variant="primary" className="animate-pulse-glow"><Icon name="upload" className="text-[16px]" />Route a Parcel or Batch</Button></Link>
         <Link to="/incidents"><Button variant="ghost"><Icon name="emergency_home" className="text-[16px]" />View Incident Center</Button></Link>
         <Link to="/assistant"><Button variant="outline"><Icon name="terminal" className="text-[16px]" />Ask the Ops Assistant</Button></Link>
       </div>

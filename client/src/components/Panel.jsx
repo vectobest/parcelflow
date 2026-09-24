@@ -1,15 +1,19 @@
 import Icon from './Icon.jsx';
 
-/** Flush "brutalist" container matching the design system's stepped-surface panels: an optional bg-surface-container-high header strip over a bg-surface-container-low body, no rounded corners. */
-export default function Panel({ icon, title, meta, actions, children, className = '', bodyClassName = 'p-space-sm' }) {
+/** Glassmorphic rounded card matching the design system's elevated panels: blurred surface, soft border, icon chip header. */
+export default function Panel({ icon, title, meta, actions, children, className = '', bodyClassName = 'p-5' }) {
   return (
-    <div className={`bg-surface-container-low flex flex-col ${className}`}>
+    <div className={`rounded-2xl bg-surface-container-low/80 backdrop-blur-md border border-white/[0.08] hover:border-white/[0.15] transition-all duration-300 shadow-xl flex flex-col ${className}`}>
       {(icon || title || actions) && (
-        <div className="bg-surface-container-high px-space-md py-space-2xs flex items-center justify-between flex-wrap gap-space-2xs">
-          <div className="flex items-center gap-space-xs min-w-0">
-            {icon && <Icon name={icon} className="text-[16px] text-tertiary shrink-0" />}
-            {title && <span className="font-headline-md text-headline-md tracking-tight text-on-surface uppercase font-bold truncate">{title}</span>}
-            {meta && <span className="font-code-sm text-code-sm text-on-surface-variant px-space-2xs bg-surface-container shrink-0">{meta}</span>}
+        <div className="px-5 pt-5 pb-3 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {icon && (
+              <span className="w-7 h-7 rounded-lg bg-tertiary/15 border border-tertiary/30 text-tertiary flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(78,222,163,0.15)]">
+                <Icon name={icon} className="text-[16px]" />
+              </span>
+            )}
+            {title && <span className="font-bold text-[16px] tracking-tight text-white truncate">{title}</span>}
+            {meta && <span className="font-code-sm text-code-sm text-on-surface-variant px-2 py-0.5 rounded-md bg-surface-container shrink-0">{meta}</span>}
           </div>
           {actions && <div className="flex items-center gap-space-sm font-code-sm text-code-sm text-on-surface-variant">{actions}</div>}
         </div>
