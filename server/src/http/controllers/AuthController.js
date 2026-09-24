@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { ValidationError } from '../../errors/index.js';
 import { ROLES } from '../../auth/roles.js';
 import { requireAuth } from '../middleware/identity.js';
+import { authRateLimiter } from '../middleware/rateLimiter.js';
 
 /**
  * Real Google OAuth when GOOGLE_CLIENT_ID/SECRET are configured (see
@@ -27,15 +28,19 @@ export class AuthController {
 
   buildRouter() {
     const router = Router();
+    // Only the routes that actually perform a sign-in attempt (brute-forceable) get the
+    // strict limiter -- GET /auth/me is a routine identity check fired on every page load
+    // and must not share that budget, or normal use (reloads, retries) locks itself out.
+    const signInLimiter = authRateLimiter();
 
     router.get('/auth/status', (_req, res) => res.status(200).json({ oauthEnabled: this.#config.oauthEnabled }));
 
-    router.get('/auth/google', (req, res, next) => {
+    router.get('/auth/google', signInLimiter, (req, res, next) => {
       if (!this.#config.oauthEnabled) return next(new ValidationError('Google OAuth is not configured on this server.'));
       this.#passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
     });
 
-    router.get('/auth/google/callback', (req, res, next) => {
+    router.get('/auth/google/callback', signInLimiter, (req, res, next) => {
       if (!this.#config.oauthEnabled) return next(new ValidationError('Google OAuth is not configured on this server.'));
       this.#passport.authenticate('google', { failureRedirect: `${this.#config.clientOrigin}/login?error=oauth_failed` })(req, res, () => {
         this.#auditService.record({ action: 'login', entity: 'user', entityId: req.user.email, actor: req.user.email, correlationId: req.correlationId, newValue: { provider: 'google' } });
@@ -43,7 +48,7 @@ export class AuthController {
       });
     });
 
-    router.post('/auth/dev-login', (req, res, next) => {
+    router.post('/auth/dev-login', signInLimiter, (req, res, next) => {
       if (this.#config.oauthEnabled) return next(new ValidationError('Local dev sign-in is disabled while Google OAuth is configured.'));
       const { email, name, role } = req.body || {};
       if (!email || typeof email !== 'string' || !email.includes('@')) return next(new ValidationError('A valid email is required.'));

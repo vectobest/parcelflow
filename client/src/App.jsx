@@ -18,10 +18,16 @@ import AccessControlPage from './pages/AccessControlPage.jsx';
 import SystemHealthPage from './pages/SystemHealthPage.jsx';
 
 export default function App() {
-  const { identity, loading } = useAuth();
+  const { identity, loading, oauthEnabled } = useAuth();
 
   if (loading) return <div className="login-shell"><p className="muted">Loading ParcelFlow...</p></div>;
-  if (!identity) return <LoginPage />;
+  if (!identity) {
+    // Real OAuth is configured -- a human actually has to pick an account, so show the login page.
+    if (oauthEnabled) return <LoginPage />;
+    // No auth configured -- auto sign-in should have handled this; AuthContext retries
+    // silently on failure, so show a quiet holding state instead of a dead-end login form.
+    return <div className="login-shell"><p className="muted">Signing in...</p></div>;
+  }
 
   return (
     <Layout>

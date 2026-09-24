@@ -4,7 +4,7 @@ import session from 'express-session';
 import { securityHeaders } from './http/middleware/security.js';
 import { correlationId } from './http/middleware/correlationId.js';
 import { requestLogger } from './http/middleware/requestLogger.js';
-import { apiRateLimiter, authRateLimiter } from './http/middleware/rateLimiter.js';
+import { apiRateLimiter } from './http/middleware/rateLimiter.js';
 import { concurrencyGate } from './http/middleware/concurrencyGate.js';
 import { attachIdentity } from './http/middleware/identity.js';
 import { errorHandler } from './http/middleware/errorHandler.js';
@@ -43,7 +43,6 @@ export function createApp(container) {
   app.use(container.passport.session());
   app.use(attachIdentity(container.authenticationService));
 
-  app.use('/api/auth', authRateLimiter());
   app.use('/api', apiRateLimiter(config));
   app.use('/api', buildApiRouter(container));
 
