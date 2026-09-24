@@ -66,8 +66,10 @@ Optionally set `ADMIN_EMAILS` / `REVIEWER_EMAILS` (comma-separated) so specific 
 The Operations Assistant and Risk engine work fully without this -- see [Operations assistant](#operations-assistant) and [Risk & Predictions](#risk--predictions-heuristic-detection-optional-gemini-narration) below. To turn on the Gemini-backed path:
 
 1. Get a key at https://aistudio.google.com/apikey.
-2. Set `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`, default `gemini-flash-latest`) in `server/.env`.
+2. Set `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`, default `gemini-3.6-flash`) in `server/.env`.
 3. Restart the server. Both features switch over automatically; every response they return carries `source: "gemini" | "heuristic"`, shown as a small badge in the UI.
+
+**Free-tier note:** Google's free tier for `generativelanguage.googleapis.com` caps requests per model both per minute and per day; a `429 RESOURCE_EXHAUSTED` while testing is expected once you exceed it, not a bug. The SDK also appears to retry internally on 429/503 before giving up, so a single request can take well over a minute under quota contention. Either way, the app keeps working -- it falls straight back to the deterministic path and marks the response `source: "heuristic"`.
 
 ## 4. Feature tour
 

@@ -20,7 +20,7 @@ export class Config {
     this.serviceTokens = env.SERVICE_TOKENS || '';
 
     this.geminiApiKey = env.GEMINI_API_KEY || '';
-    this.geminiModel = env.GEMINI_MODEL || 'gemini-flash-latest';
+    this.geminiModel = env.GEMINI_MODEL || 'gemini-3.6-flash';
     this.aiEnabled = Boolean(this.geminiApiKey);
 
     this.maxUploadBytes = Number(env.MAX_UPLOAD_BYTES || 5 * 1024 * 1024);
