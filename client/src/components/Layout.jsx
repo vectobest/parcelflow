@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, animate, motion, useMotionValue, useTransform } from 'motion/react';
 import { useAuth } from '../state/AuthContext.jsx';
+import { projectRest, releaseVelocity } from '../utils/gesture.js';
 import CommandPalette from './CommandPalette.jsx';
 import Icon from './Icon.jsx';
 
@@ -29,14 +31,64 @@ const NAV = [
   ] }
 ];
 
+const DRAWER_WIDTH = 256;
+const DESKTOP_QUERY = '(min-width: 1024px)';
+const DRAWER_SPRING = { type: 'spring', visualDuration: 0.3, bounce: 0 };
+
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia(DESKTOP_QUERY).matches);
+  useEffect(() => {
+    const mql = window.matchMedia(DESKTOP_QUERY);
+    const onChange = (event) => setIsDesktop(event.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+  return isDesktop;
+}
+
 export default function Layout({ children }) {
   const { identity, logout } = useAuth();
+  const isDesktop = useIsDesktop();
   const [menuOpen, setMenuOpen] = useState(false);
+  // True only once the drawer has fully finished closing, so it stays grabbable mid-animation.
+  const [drawerParked, setDrawerParked] = useState(!isDesktop);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
-  useEffect(() => setMenuOpen(false), [location.pathname]);
+  const drawerX = useMotionValue(isDesktop ? 0 : -DRAWER_WIDTH);
+  const lastDragMoveAt = useRef(0);
+  const didDrag = useRef(false);
+  const scrimOpacity = useTransform(drawerX, [-DRAWER_WIDTH, 0], [0, 0.5]);
+
+  const settleDrawer = useCallback((open, velocity = 0) => {
+    setMenuOpen(open);
+    if (open) setDrawerParked(false);
+    // Bounce only when the finger carried momentum; taps and route changes settle without overshoot.
+    const bounce = open && Math.abs(velocity) > 500 ? 0.2 : 0;
+    animate(drawerX, open ? 0 : -DRAWER_WIDTH, {
+      ...DRAWER_SPRING,
+      bounce,
+      velocity,
+      onComplete: () => { if (!open) setDrawerParked(true); }
+    });
+  }, [drawerX]);
+
+  useEffect(() => {
+    setMenuOpen(false);
+    setDrawerParked(!isDesktop);
+    drawerX.set(isDesktop ? 0 : -DRAWER_WIDTH);
+  }, [isDesktop, drawerX]);
+
+  useEffect(() => {
+    if (!isDesktop) settleDrawer(false);
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function onDrawerDragEnd(_event, info) {
+    const velocity = releaseVelocity(info.velocity.x, lastDragMoveAt.current);
+    const rest = projectRest(drawerX.get(), velocity);
+    settleDrawer(rest > -DRAWER_WIDTH / 2, velocity);
+  }
 
   useEffect(() => {
     function onKeyDown(event) {
@@ -63,11 +115,36 @@ export default function Layout({ children }) {
         <div className="absolute top-[28%] right-[-100px] w-[600px] h-[600px] bg-secondary-container/10 rounded-full blur-[140px] opacity-40" />
       </div>
 
-      {menuOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMenuOpen(false)} />}
+      {!isDesktop && (
+        <motion.div
+          className={`fixed inset-0 bg-black z-40 ${menuOpen ? '' : 'pointer-events-none'}`}
+          style={{ opacity: scrimOpacity }}
+          onClick={() => settleDrawer(false)}
+          aria-hidden="true"
+        />
+      )}
 
-      <aside className={`fixed left-0 top-0 bottom-8 w-64 bg-surface-container-low/90 backdrop-blur-xl z-50 flex flex-col justify-between border-r border-white/[0.08] shadow-2xl transition-transform lg:translate-x-0 ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <motion.aside
+        className={`fixed left-0 top-0 bottom-8 w-64 bg-surface-container-low z-50 flex flex-col justify-between border-r border-white/[0.08] [&_a]:[-webkit-user-drag:none] ${isDesktop ? '' : "shadow-xl before:content-[''] before:absolute before:inset-y-0 before:right-full before:w-16 before:bg-surface-container-low"}`}
+        style={{ x: drawerX, touchAction: 'pan-y' }}
+        drag={isDesktop ? false : 'x'}
+        dragConstraints={{ left: -DRAWER_WIDTH, right: 0 }}
+        dragElastic={{ left: 0, right: 0.15 }}
+        dragMomentum={false}
+        dragDirectionLock
+        onPointerDownCapture={() => { didDrag.current = false; }}
+        onDragStart={() => { didDrag.current = true; }}
+        onDrag={() => { lastDragMoveAt.current = performance.now(); }}
+        onDragEnd={onDrawerDragEnd}
+        onClickCapture={(event) => {
+          // A drag that ends over a nav link must not also count as a tap on it.
+          if (didDrag.current) { event.preventDefault(); event.stopPropagation(); }
+        }}
+        aria-hidden={drawerParked || undefined}
+        inert={drawerParked ? '' : undefined}
+      >
         <div className="flex flex-col overflow-y-auto">
-          <div className="h-16 px-4 flex items-center gap-3 border-b border-white/[0.06] bg-surface-container-lowest/70 backdrop-blur-sm shrink-0">
+          <div className="h-16 px-4 flex items-center gap-3 border-b border-white/[0.06] bg-surface-container-lowest shrink-0">
             <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary">
               <Icon name="hub" className="text-[22px]" />
             </div>
@@ -95,7 +172,7 @@ export default function Layout({ children }) {
                     className={({ isActive }) => `group flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] transition-colors border ${
                       isActive
                         ? 'bg-primary/15 text-primary border-primary/25 font-semibold'
-                        : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container/70 border-transparent hover:border-white/[0.05] font-medium'
+                        : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container/70 active:bg-surface-container-high border-transparent hover:border-white/[0.05] font-medium'
                     }`}
                   >
                     {({ isActive }) => (
@@ -111,7 +188,7 @@ export default function Layout({ children }) {
             ))}
           </nav>
         </div>
-        <button className="m-3 p-3.5 rounded-2xl border border-white/[0.08] bg-surface-container-lowest/80 backdrop-blur-md hover:bg-surface-container flex items-center gap-3 text-left transition-colors" type="button" onClick={logout} title="Sign out">
+        <button className="m-3 p-3.5 rounded-2xl border border-white/[0.08] bg-surface-container-lowest hover:bg-surface-container active:bg-surface-container-high flex items-center gap-3 text-left transition-colors" type="button" onClick={logout} title="Sign out">
           <div className="relative shrink-0">
             <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-[12px]">
               {initials}
@@ -123,12 +200,12 @@ export default function Layout({ children }) {
             <span className="block text-[11px] font-medium text-on-surface-variant/80 uppercase truncate">{identity.role} &middot; sign out</span>
           </span>
         </button>
-      </aside>
+      </motion.aside>
 
       <div className="lg:pl-64 relative z-10">
         <header className="fixed top-0 left-0 lg:left-64 right-0 h-14 bg-surface-container-low/80 backdrop-blur-xl border-b border-white/[0.08] z-40 flex items-center justify-between px-6 gap-3 shadow-sm">
           <div className="flex items-center gap-4 flex-1 min-w-0 max-w-xl">
-            <button className="lg:hidden p-2 rounded-xl border border-white/[0.08] text-on-surface-variant" type="button" aria-label="Open navigation" onClick={() => setMenuOpen(true)}>
+            <button className="lg:hidden p-2 rounded-xl border border-white/[0.08] text-on-surface-variant active:bg-surface-container-high" type="button" aria-label="Open navigation" aria-expanded={menuOpen} onClick={() => settleDrawer(true)}>
               <Icon name="menu" className="text-[18px]" />
             </button>
             <div className="relative w-full max-w-md group hidden sm:block">
@@ -179,7 +256,9 @@ export default function Layout({ children }) {
         </footer>
       </div>
 
-      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} onNavigate={(to) => { navigate(to); setPaletteOpen(false); }} groups={NAV} />}
+      <AnimatePresence>
+        {paletteOpen && <CommandPalette key="palette" onClose={() => setPaletteOpen(false)} onNavigate={(to) => { navigate(to); setPaletteOpen(false); }} groups={NAV} />}
+      </AnimatePresence>
     </div>
   );
 }

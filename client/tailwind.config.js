@@ -61,25 +61,6 @@ export default {
         '3xl': '1.25rem',
         full: '9999px'
       },
-      keyframes: {
-        pulseGlow: {
-          '0%, 100%': { boxShadow: '0 0 15px -3px rgba(208, 188, 255, 0.25), 0 0 6px -2px rgba(160, 120, 255, 0.4)' },
-          '50%': { boxShadow: '0 0 25px 2px rgba(208, 188, 255, 0.45), 0 0 10px 1px rgba(160, 120, 255, 0.6)' }
-        },
-        pulseAlertGlow: {
-          '0%, 100%': { boxShadow: '0 0 14px -2px rgba(255, 100, 100, 0.2)' },
-          '50%': { boxShadow: '0 0 24px 2px rgba(255, 100, 100, 0.4)' }
-        },
-        shimmerLine: {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' }
-        }
-      },
-      animation: {
-        'pulse-glow': 'pulseGlow 4s ease-in-out infinite',
-        'pulse-alert-glow': 'pulseAlertGlow 3s ease-in-out infinite',
-        'shimmer': 'shimmerLine 3s linear infinite'
-      },
       spacing: {
         'space-3xs': '0.125rem',
         'space-xs': '0.375rem',

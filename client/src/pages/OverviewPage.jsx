@@ -20,7 +20,7 @@ const KPI_STYLES = {
 function KpiCard({ icon, tone, label, value, note }) {
   const s = KPI_STYLES[tone] || KPI_STYLES.primary;
   return (
-    <div className={`p-5 rounded-2xl bg-surface-container-low/80 backdrop-blur-md border border-white/[0.08] ${s.border} transition-colors flex flex-col justify-between`}>
+    <div className={`p-5 rounded-2xl bg-surface-container-low border border-white/[0.08] ${s.border} transition-colors flex flex-col justify-between`}>
       <div className="flex items-center justify-between">
         <span className="text-[12px] font-semibold text-on-surface-variant tracking-wide uppercase">{label}</span>
         <span className={`w-9 h-9 rounded-xl border flex items-center justify-center ${s.icon}`}>
@@ -84,7 +84,7 @@ export default function OverviewPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {attentionRequired.map((item, i) => (
-              <div key={i} className="p-5 rounded-2xl bg-surface-container-low/90 backdrop-blur-md border border-error/25 flex items-start gap-3">
+              <div key={i} className="p-5 rounded-2xl bg-surface-container-low border border-error/25 flex items-start gap-3">
                 <span className="w-8 h-8 rounded-xl bg-error/15 border border-error/30 text-error flex items-center justify-center shrink-0">
                   <Icon name="priority_high" className="text-[16px]" />
                 </span>
