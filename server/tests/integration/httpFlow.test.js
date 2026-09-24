@@ -88,3 +88,18 @@ test('a malformed XML upload with a DOCTYPE is rejected, not parsed', async () =
   const res = await admin.post('/api/batches/upload').send({ content: '<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><Batch/>', format: 'xml', idempotencyKey: 'xxe-1' });
   assert.equal(res.status, 422);
 });
+
+test('GET /api/risk and POST /api/assistant/ask work over HTTP on the heuristic path (no GEMINI_API_KEY in the test environment)', async () => {
+  const { app } = buildApp();
+  const admin = request.agent(app);
+  await admin.post('/api/auth/dev-login').send({ email: 'admin5@example.com', role: 'ADMIN' });
+
+  const risk = await admin.get('/api/risk');
+  assert.equal(risk.status, 200);
+  assert.equal(risk.body.source, 'heuristic');
+
+  const answer = await admin.post('/api/assistant/ask').send({ question: 'which policy is active' });
+  assert.equal(answer.status, 200);
+  assert.equal(answer.body.source, 'heuristic');
+  assert.match(answer.body.answer, /v1/);
+});

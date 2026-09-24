@@ -14,11 +14,15 @@ server.listen(config.port, () => {
     port: config.port,
     nodeEnv: config.nodeEnv,
     oauthEnabled: config.oauthEnabled,
+    aiEnabled: config.aiEnabled,
     activePolicy: container.policyService.activeVersion(),
     clientOrigin: config.clientOrigin
   });
   if (!config.oauthEnabled) {
     container.logger.warn('oauth_not_configured', { message: 'GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET are not set; falling back to POST /api/auth/dev-login for local sign-in.' });
+  }
+  if (!config.aiEnabled) {
+    container.logger.warn('ai_not_configured', { message: 'GEMINI_API_KEY is not set; the Operations Assistant and Risk narrator are using the deterministic heuristic only.' });
   }
 });
 

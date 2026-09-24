@@ -30,6 +30,9 @@ import { DigitalTwinService } from './simulation/DigitalTwinService.js';
 import { RetryService } from './retry/RetryService.js';
 import { SystemHistoryService } from './history/SystemHistoryService.js';
 import { OperationsAssistantService } from './assistant/OperationsAssistantService.js';
+import { AiOperationsAssistantService } from './assistant/AiOperationsAssistantService.js';
+import { AiRiskNarrator } from './intelligence/AiRiskNarrator.js';
+import { GeminiClient } from './ai/GeminiClient.js';
 
 import { ChaosDrillService } from './drills/ChaosDrillService.js';
 import { SecurityDrillService } from './drills/SecurityDrillService.js';
@@ -93,7 +96,13 @@ export function createContainer({ config = new Config(), clock = () => new Date(
   const digitalTwinService = new DigitalTwinService({ dashboardService });
   const retryService = new RetryService({ batchRepository, routingEngine, policyService, approvalService, auditService, authorizationService, clock, maxRetries: config.maxRetries });
   const systemHistoryService = new SystemHistoryService({ policyService, batchService, approvalService, incidentDetectorService });
-  const operationsAssistantService = new OperationsAssistantService({ policyService, batchService, riskService, incidentDetectorService, digitalTwinService });
+
+  const heuristicAssistant = new OperationsAssistantService({ policyService, batchService, riskService, incidentDetectorService, digitalTwinService });
+  const gemini = config.aiEnabled ? new GeminiClient({ apiKey: config.geminiApiKey, model: config.geminiModel }) : null;
+  const operationsAssistantService = gemini
+    ? new AiOperationsAssistantService({ gemini, policyService, batchService, incidentDetectorService, riskService, failureDnaService, digitalTwinService, fallback: heuristicAssistant })
+    : heuristicAssistant;
+  const riskNarrator = gemini ? new AiRiskNarrator({ gemini, riskService }) : { assess: () => ({ ...riskService.assess(), source: 'heuristic' }) };
 
   const chaosDrillService = new ChaosDrillService({ incidentDetectorService, auditService, clock });
   const securityDrillService = new SecurityDrillService({ authorizationService, authenticationService, auditService, config });
@@ -111,7 +120,7 @@ export function createContainer({ config = new Config(), clock = () => new Date(
   const approvalController = new ApprovalController({ approvalService });
   const policyController = new PolicyController({ policyService, auditService, authorizationService, ruleConflictDetector, policyBlastRadiusService });
   const analysisController = new AnalysisController({ comparisonService });
-  const intelligenceController = new IntelligenceController({ riskService, incidentDetectorService, failureDnaService, operationsAssistantService, auditService });
+  const intelligenceController = new IntelligenceController({ riskNarrator, incidentDetectorService, failureDnaService, operationsAssistantService, auditService });
   const simulationController = new SimulationController({ digitalTwinService });
   const drillController = new DrillController({ chaosDrillService, securityDrillService, authorizationService });
   const historyController = new HistoryController({ systemHistoryService });
@@ -123,7 +132,8 @@ export function createContainer({ config = new Config(), clock = () => new Date(
     auditService, authorizationService, authenticationService,
     approvalService, batchService, secureBatchParser,
     comparisonService, riskService, failureDnaService, incidentDetectorService,
-    dashboardService, digitalTwinService, retryService, systemHistoryService, operationsAssistantService,
+    dashboardService, digitalTwinService, retryService, systemHistoryService,
+    heuristicAssistant, operationsAssistantService, riskNarrator, gemini,
     chaosDrillService, securityDrillService,
     userStore, passport, requestGate,
     healthController, authController, dashboardController, parcelController, batchController,

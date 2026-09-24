@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { useApiError } from '../hooks/useApiError.js';
 import Panel from '../components/Panel.jsx';
 import Button from '../components/Button.jsx';
+import Badge from '../components/Badge.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { Input } from '../components/Field.jsx';
 
@@ -45,7 +46,7 @@ export default function AssistantPage() {
 
       <div className="flex flex-col gap-space-sm">
         {history.slice().reverse().map((entry, i) => (
-          <Panel key={i} icon="chat">
+          <Panel key={i} icon="chat" actions={<Badge tone={entry.source === 'gemini' ? 'LOW' : 'neutral'}>{entry.source === 'gemini' ? 'Gemini' : 'Heuristic'}</Badge>}>
             <p className="font-body-compact text-body-compact text-on-surface mb-space-2xs"><span className="text-on-surface-variant font-bold">Q:</span> {entry.question}</p>
             <p className={`font-body-compact text-body-compact ${entry.unresolved ? 'text-on-surface-variant' : 'text-on-surface'}`}>{entry.answer}</p>
             {entry.citedIds.length > 0 && <p className="mt-space-xs font-kpi-micro text-kpi-micro text-on-surface-variant uppercase">Cited: {entry.citedIds.join(', ')}</p>}

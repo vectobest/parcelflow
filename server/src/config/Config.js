@@ -19,6 +19,10 @@ export class Config {
     this.reviewerEmails = (env.REVIEWER_EMAILS || '').split(',').map((email) => email.trim().toLowerCase()).filter(Boolean);
     this.serviceTokens = env.SERVICE_TOKENS || '';
 
+    this.geminiApiKey = env.GEMINI_API_KEY || '';
+    this.geminiModel = env.GEMINI_MODEL || 'gemini-flash-latest';
+    this.aiEnabled = Boolean(this.geminiApiKey);
+
     this.maxUploadBytes = Number(env.MAX_UPLOAD_BYTES || 5 * 1024 * 1024);
     this.maxBatchSize = Number(env.MAX_BATCH_SIZE || 5000);
     this.maxRetries = Number(env.MAX_RETRIES || 3);

@@ -1,10 +1,13 @@
 /**
- * Read-only Operations Assistant (master prompt section 27/28). This is
- * deliberately NOT a language model: it recognises a fixed set of question
- * patterns and answers only from live application data, citing the
- * specific IDs it used. Anything it doesn't recognise gets an honest "I
- * can't answer that" rather than a guess -- see docs/AI_USAGE.md for why
- * a real LLM integration was scoped out of this assessment.
+ * Deterministic, pattern-matched Operations Assistant: recognises a fixed
+ * set of question shapes and answers only from live application data,
+ * citing the specific IDs it used. Anything it doesn't recognise gets an
+ * honest "I can't answer that" rather than a guess.
+ *
+ * This is the assistant used directly when GEMINI_API_KEY isn't
+ * configured, and it is also the fallback `AiOperationsAssistantService`
+ * calls whenever the Gemini-backed path fails to produce a grounded
+ * answer -- see docs/decisions/ADR-009. It never talks to a network.
  */
 export class OperationsAssistantService {
   #policyService;
@@ -47,49 +50,51 @@ export class OperationsAssistantService {
 
   #answerPolicy(version, question) {
     const policy = this.#policyService.get(version);
-    if (!policy) return { question, answer: `I don't have a policy version "${version}" on record.`, citedIds: [], unresolved: true };
+    if (!policy) return { question, answer: `I don't have a policy version "${version}" on record.`, citedIds: [], unresolved: true, source: 'heuristic' };
     return {
       question,
       answer: `Policy ${policy.version} is ${policy.state}. Mail <= ${policy.mailWeightLimit}kg, Regular <= ${policy.regularWeightLimit}kg, Heavy above that. Insurance approval required above EUR ${policy.insuranceValueThreshold}.`,
       citedIds: [policy.version],
-      unresolved: false
+      unresolved: false,
+      source: 'heuristic'
     };
   }
 
   #answerBatch(batchId, question) {
     const batch = this.#batchService.list().find((b) => b.batchId.startsWith(batchId));
-    if (!batch) return { question, answer: `I don't have a batch matching "${batchId}".`, citedIds: [], unresolved: true };
+    if (!batch) return { question, answer: `I don't have a batch matching "${batchId}".`, citedIds: [], unresolved: true, source: 'heuristic' };
     const failed = batch.results.filter((r) => r.outcome.status === 'error').length;
     return {
       question,
       answer: `Batch ${batch.batchId} processed ${batch.results.length} parcels under policy ${batch.policyVersion}: ${batch.results.length - failed} succeeded, ${failed} failed validation. State: ${batch.state}.`,
       citedIds: [batch.batchId, batch.policyVersion],
-      unresolved: false
+      unresolved: false,
+      source: 'heuristic'
     };
   }
 
   #answerIncident(incidentId, question) {
     const incident = this.#incidentDetectorService.get(incidentId.toUpperCase());
-    if (!incident) return { question, answer: `I don't have an incident matching "${incidentId}".`, citedIds: [], unresolved: true };
-    return { question, answer: `${incident.incidentId} (${incident.severity}, ${incident.status}): failure rate went from ${(incident.failureRateBefore * 100).toFixed(1)}% to ${(incident.failureRateAfter * 100).toFixed(1)}%. ${incident.likelyCause}`, citedIds: [incident.incidentId, ...incident.relatedBatchIds], unresolved: false };
+    if (!incident) return { question, answer: `I don't have an incident matching "${incidentId}".`, citedIds: [], unresolved: true, source: 'heuristic' };
+    return { question, answer: `${incident.incidentId} (${incident.severity}, ${incident.status}): failure rate went from ${(incident.failureRateBefore * 100).toFixed(1)}% to ${(incident.failureRateAfter * 100).toFixed(1)}%. ${incident.likelyCause}`, citedIds: [incident.incidentId, ...incident.relatedBatchIds], unresolved: false, source: 'heuristic' };
   }
 
   #answerLastIncident(question) {
     const incidents = this.#incidentDetectorService.list();
-    if (!incidents.length) return { question, answer: 'There have been no incidents detected this session.', citedIds: [], unresolved: false };
+    if (!incidents.length) return { question, answer: 'There have been no incidents detected this session.', citedIds: [], unresolved: false, source: 'heuristic' };
     return this.#answerIncident(incidents.at(-1).incidentId, question);
   }
 
   #answerApprovalTrend(question) {
     const risk = this.#riskService.assess();
     const evidence = risk.evidence.find((e) => /approval/i.test(e));
-    if (!evidence) return { question, answer: 'I don\'t see a rising approval-backlog signal right now. ' + risk.message, citedIds: [], unresolved: false };
-    return { question, answer: evidence, citedIds: [], unresolved: false };
+    if (!evidence) return { question, answer: 'I don\'t see a rising approval-backlog signal right now. ' + risk.message, citedIds: [], unresolved: false, source: 'heuristic' };
+    return { question, answer: evidence, citedIds: [], unresolved: false, source: 'heuristic' };
   }
 
   #answerRisk(question) {
     const risk = this.#riskService.assess();
-    return { question, answer: `${risk.title}: ${risk.message} ${risk.evidence.join(' ')} Recommendation: ${risk.recommendation}`.trim(), citedIds: [], unresolved: risk.level === 'INSUFFICIENT_DATA' };
+    return { question, answer: `${risk.title}: ${risk.message} ${risk.evidence.join(' ')} Recommendation: ${risk.recommendation}`.trim(), citedIds: [], unresolved: risk.level === 'INSUFFICIENT_DATA', source: 'heuristic' };
   }
 
   #answerVolumeWhatIf(percent, question) {
@@ -97,7 +102,7 @@ export class OperationsAssistantService {
     return {
       question,
       answer: `At +${percent}% volume, projected parcels go from ${projection.current.parcels} to ${projection.projected.parcels}, and the approval queue from ${projection.current.approvals} to ${projection.projected.approvals}. ${projection.methodology}`,
-      citedIds: [], unresolved: false
+      citedIds: [], unresolved: false, source: 'heuristic'
     };
   }
 
@@ -105,7 +110,7 @@ export class OperationsAssistantService {
     return {
       question,
       answer: 'I can only answer from application data, and I don\'t recognise that question yet. Try asking about a specific policy version, a batch ID, an incident ID, the current risk outlook, or "what happens if volume increases 50%".',
-      citedIds: [], unresolved: true
+      citedIds: [], unresolved: true, source: 'heuristic'
     };
   }
 }

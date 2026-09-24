@@ -21,12 +21,12 @@ export default function RiskPage() {
 
   return (
     <div className="flex flex-col gap-space-sm">
-      <PageHeader eyebrow="Intelligence" title="Risk &amp; Predictions" description="Transparent heuristics over the current session's data -- not machine learning." />
+      <PageHeader eyebrow="Intelligence" title="Risk &amp; Predictions" description="The risk level, confidence and evidence below are always a transparent heuristic over this session's data. When Gemini is configured, it only rephrases that same evidence into plain language -- it never changes the level or invents a number." />
 
       <Panel
         icon="monitoring"
         title="Operational Risk"
-        actions={<Badge tone={risk.level}>{`${risk.level.replaceAll('_', ' ')} · ${risk.confidence}% confidence`}</Badge>}
+        actions={<div className="flex items-center gap-space-xs flex-wrap justify-end"><Badge tone={risk.source === 'gemini' ? 'LOW' : 'neutral'}>{risk.source === 'gemini' ? 'Gemini' : 'Heuristic'}</Badge><Badge tone={risk.level}>{`${risk.level.replaceAll('_', ' ')} · ${risk.confidence}% confidence`}</Badge></div>}
       >
         <p className="font-headline-md text-headline-md text-on-surface font-semibold mb-space-2xs">{risk.title}</p>
         <p className="font-body-compact text-body-compact text-on-surface-variant">{risk.message}</p>
@@ -39,7 +39,11 @@ export default function RiskPage() {
           <span className="font-code-sm text-code-sm text-on-surface font-bold uppercase">Recommendation</span>
           <span className="font-code-sm text-code-sm text-primary text-right">{risk.recommendation}</span>
         </div>
-        <p className="mt-space-sm font-kpi-micro text-kpi-micro text-on-surface-variant uppercase">Methodology: transparent {risk.methodology} over recent batches and the approval queue &mdash; not machine learning.</p>
+        <p className="mt-space-sm font-kpi-micro text-kpi-micro text-on-surface-variant uppercase">
+          {risk.source === 'gemini'
+            ? 'Detection: transparent heuristic. Wording: Gemini, grounded only in the evidence above.'
+            : `Methodology: transparent ${risk.methodology || 'heuristic'} over recent batches and the approval queue — not machine learning.`}
+        </p>
       </Panel>
 
       <Panel icon="fingerprint" title={`Failure DNA (${dna?.totalFailures ?? 0} failures fingerprinted)`} bodyClassName={dna?.categories.length ? '' : 'p-space-sm'}>
