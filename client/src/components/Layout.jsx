@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../state/AuthContext.jsx';
-import { useMode } from '../state/ModeContext.jsx';
 import CommandPalette from './CommandPalette.jsx';
 import Icon from './Icon.jsx';
 
@@ -32,7 +31,6 @@ const NAV = [
 
 export default function Layout({ children }) {
   const { identity, logout } = useAuth();
-  const { mode, toggle, isTechnical } = useMode();
   const [menuOpen, setMenuOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
@@ -149,15 +147,6 @@ export default function Layout({ children }) {
             <span className="text-[15px] font-bold text-on-surface truncate">{current?.label || 'ParcelFlow'}</span>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <button
-              className="px-3 py-1.5 rounded-xl bg-surface-container/60 hover:bg-surface-container border border-white/[0.08] text-on-surface-variant hover:text-white text-[12px] font-semibold uppercase transition-all"
-              type="button"
-              onClick={toggle}
-              aria-pressed={isTechnical}
-            >
-              {isTechnical ? 'Technical' : 'Simple'}
-            </button>
-            <div className="h-5 w-px bg-white/[0.1] mx-0.5 hidden sm:block" />
             <div className="hidden sm:flex items-center gap-3 pl-1.5">
               <div className="relative">
                 <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-[12px]">
