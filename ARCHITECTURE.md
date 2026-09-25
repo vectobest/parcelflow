@@ -3,38 +3,63 @@
 ## System architecture
 
 ```
-                    ┌─────────────────────────┐
-                    │   React client (Vite)   │
-                    │  pages / AuthContext /  │
-                    │  ModeContext / api/     │
-                    └────────────┬────────────┘
-                                 │ fetch, credentials: include
-                                 │ (Vite dev proxy -> :4000/api)
-                    ┌────────────▼────────────┐
-                    │   Express app (server)  │
-                    │  security headers, CORS,│
-                    │  rate limit, sessions,  │
-                    │  Passport, controllers  │
-                    └────────────┬────────────┘
-                                 │
-                    ┌────────────▼────────────┐
-                    │   Application services   │
-                    │  PolicyService, Batch-   │
-                    │  Service, RetryService,  │
-                    │  IncidentDetector, ...   │
-                    └────────────┬────────────┘
-                                 │
-                    ┌────────────▼────────────┐
-                    │      Domain layer        │
-                    │  Parcel, Policy,         │
-                    │  RoutingDecision,        │
-                    │  RoutingEngine + rules   │
-                    └────────────┬────────────┘
-                                 │
-                    ┌────────────▼────────────┐
-                    │   In-memory repositories │
-                    │  (see ADR-007)            │
-                    └───────────────────────────┘
+                    │      OPERATIONS      │
+                    │        USER          │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                 ┌──────────────────────────┐
+                 │      React + Vite        │
+                 │     Control Room UI      │
+                 │                          │
+                 │ Dashboard • Upload       │
+                 │ Approvals • Policies     │
+                 └────────────┬─────────────┘
+                              │
+                         HTTP / API
+                              │
+                              ▼
+                 ┌──────────────────────────┐
+                 │     Express / Node.js    │
+                 │        API Layer         │
+                 │                          │
+                 │ Auth • CORS • Rate Limit │
+                 │ Controllers • Sessions   │
+                 └────────────┬─────────────┘
+                              │
+                              ▼
+        ┌─────────────────────────────────────────────┐
+        │              APPLICATION LAYER              │
+        │                                             │
+        │  Batch Processing    Policy Management      │
+        │  Approvals           Retry Handling         │
+        │  Incident Detection  Risk / Analytics       │
+        └──────────────────────┬──────────────────────┘
+                               │
+                               ▼
+                 ┌──────────────────────────┐
+                 │       ROUTING ENGINE     │
+                 │                          │
+                 │  1. Validate Parcel     │
+                 │  2. Check Insurance     │
+                 │  3. Check Mail          │
+                 │  4. Check Regular       │
+                 │  5. Check Heavy         │
+                 └────────────┬─────────────┘
+                              │
+                    ┌─────────┴─────────┐
+                    ▼                   ▼
+             ┌─────────────┐     ┌──────────────┐
+             │  APPROVED   │     │   PENDING    │
+             │   ROUTE     │     │   APPROVAL   │
+             └──────┬──────┘     └──────┬───────┘
+                    │                   │
+                    └─────────┬─────────┘
+                              ▼
+                    ┌───────────────────┐
+                    │  Audit + History  │
+                    │  Logs + Incidents │
+                    └───────────────────┘
 ```
 
 `server/src/container.js` is the single composition root: it is the only file that imports every concrete class and wires them together via constructor injection. Every service depends on abstractions (a repository base class, another service's public interface), never on a concrete database, HTTP framework, or `process.env` directly.
