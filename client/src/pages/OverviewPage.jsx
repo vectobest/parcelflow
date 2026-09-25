@@ -36,24 +36,18 @@ function KpiCard({ bay, icon, tone, label, value, note }) {
   );
 }
 
-// Short codes as printed on depot labels; unknown department names fall back to their first word.
-const SORT_CODES = { mail: 'MAIL', regular: 'REG', heavy: 'HVY' };
+// Mail, regular, heavy -- the order parcels move through by weight.
+const DEPARTMENT_ORDER = ['mail', 'regular', 'heavy'];
 const DEFAULT_DEPARTMENTS = ['Mail Department', 'Regular Department', 'Heavy Department'];
 
-function sortCodeFor(department) {
-  const word = department.split(/\s+/)[0].toLowerCase();
-  return SORT_CODES[word] || word.slice(0, 4).toUpperCase();
-}
-
-function SortLabel({ code, name, count, note, band, to }) {
+function SortLabel({ name, count, note, band, to }) {
   const body = (
     <>
       {band && <div className={`h-2 ${band}`} aria-hidden="true" />}
-      <div className="p-3 sm:p-4 flex flex-col gap-3 h-full">
-        <span className="text-[12px] text-on-surface-variant">{name}</span>
-        <span className="sort-code text-[40px] sm:text-[48px] text-on-surface" aria-hidden="true">{code}</span>
-        <span className="mt-auto flex items-baseline gap-1.5">
-          <span className="font-display text-[26px] leading-none tabular-nums">{count}</span>
+      <div className="p-3 sm:p-4 flex flex-col gap-2 h-full">
+        <span className="tile-name font-display text-[16px] leading-tight text-on-surface">{name}</span>
+        <span className="mt-auto flex items-baseline gap-1.5 flex-wrap">
+          <span className="font-display text-[30px] leading-none tabular-nums text-on-surface">{count}</span>
           <span className="text-[12px] text-on-surface-variant">{note}</span>
         </span>
       </div>
@@ -67,18 +61,17 @@ function SortLabel({ code, name, count, note, band, to }) {
 
 // Light theme only: one label per outcome, the way a sort wall looks on the depot floor.
 function SortWall({ snapshot }) {
-  // Held parcels are counted under an insurance "department" too; they get their own INS label below instead.
+  // Held parcels are counted under an insurance "department" too; they get their own label below instead.
   const counted = Object.keys(snapshot.departmentDistribution).filter((name) => !/insurance/i.test(name));
-  const order = Object.keys(SORT_CODES);
-  const rank = (name) => { const i = order.indexOf(name.split(/\s+/)[0].toLowerCase()); return i === -1 ? order.length : i; };
+  const rank = (name) => { const i = DEPARTMENT_ORDER.indexOf(name.split(/\s+/)[0].toLowerCase()); return i === -1 ? DEPARTMENT_ORDER.length : i; };
   const departments = (counted.length ? counted : DEFAULT_DEPARTMENTS).sort((a, b) => rank(a) - rank(b));
   return (
     <div className="light-only sort-wall grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       {departments.map((name) => (
-        <SortLabel key={name} code={sortCodeFor(name)} name={name} count={snapshot.departmentDistribution[name] || 0} note="routed" band="bg-black" />
+        <SortLabel key={name} name={name} count={snapshot.departmentDistribution[name] || 0} note="routed" band="bg-black" />
       ))}
-      <SortLabel code="INS" name="Insurance check" count={snapshot.pendingApproval} note="waiting for a reviewer" band="bg-[rgb(var(--c-tape))]" to="/approvals" />
-      <SortLabel code="ERR" name="Couldn't be routed" count={snapshot.validationErrors} note="need fixing" band="bg-error" />
+      <SortLabel name="Insurance check" count={snapshot.pendingApproval} note="waiting for a reviewer" band="bg-[rgb(var(--c-tape))]" to="/approvals" />
+      <SortLabel name="Couldn't be routed" count={snapshot.validationErrors} note="need fixing" band="bg-error" />
     </div>
   );
 }

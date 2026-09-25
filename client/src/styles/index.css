@@ -139,8 +139,7 @@
 .light .dark-only { display: none; }
 :root:not(.light) .light-only { display: none; }
 
-/* The sort wall: one label per outcome, sort code printed huge. */
-.sort-code { font-family: var(--f-display); font-stretch: 125%; font-weight: 900; line-height: 0.85; letter-spacing: -0.02em; }
+/* The sort wall: one label per outcome. */
 .barcode { font-family: 'Libre Barcode 39', monospace; font-weight: 400; line-height: 1; letter-spacing: 0; white-space: nowrap; overflow: hidden; }
 
 /* The one motion moment: labels print onto the wall, line by line, left to right. */
@@ -243,3 +242,13 @@
 .light .attn li p { color: rgb(0 0 0); }
 /* The compact mobile header can't afford the extra-wide cut. */
 .light .app-header .font-display { font-stretch: 100%; font-size: 16px; }
+
+/* Main text is pinned to literal black in light mode rather than read from a variable, so browser dark-mode
+   tools that rewrite colour variables can't turn headings white on white. */
+.light .text-white,
+.light .text-on-surface,
+.light .font-display { color: rgb(0 0 0); }
+.light .text-on-surface-variant { color: rgb(84 74 56); }
+.light .nav-item[aria-current="page"],
+.light .nav-item[aria-current="page"] .text-white { color: rgb(255 255 255); }
+.light .tile-name { font-stretch: 100%; }
