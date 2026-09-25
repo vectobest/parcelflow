@@ -97,12 +97,14 @@ function OutcomeTrend({ snapshot, trend }) {
     { key: 'pending', label: 'Insurance check', color: colors.pending },
     { key: 'error', label: "Couldn't be routed", color: colors.error }
   ];
+  // An older server returns no trend; show the empty state instead of taking the whole page down.
+  const points = trend?.points ?? [];
   return (
     <Panel icon="show_chart" title="Parcels over time">
       <p className="text-[13px] text-on-surface-variant mb-3">Running total for each outcome, one step per batch.</p>
-      {trend.points.length < 2
+      {points.length < 2
         ? <p className="text-[13px] text-on-surface-variant py-8 text-center">The chart starts after the first batch. Route a parcel or upload a batch from Intake.</p>
-        : <TrendChart title="Parcels over time" series={series} points={trend.points} chrome={CHART_CHROME[theme]} />}
+        : <TrendChart title="Parcels over time" series={series} points={points} chrome={CHART_CHROME[theme]} />}
     </Panel>
   );
 }
