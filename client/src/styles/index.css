@@ -227,6 +227,9 @@
 
 /* Status stickers read as stamps: wide, bold, small -- the one place caps belong, because the values are codes. */
 .light [data-tone].font-mono.uppercase { font-stretch: 125%; font-weight: 700; font-size: 10px; letter-spacing: 0.02em; }
-.light .attn { background: rgb(255 255 255); }
+/* Background and text pinned together so nothing can recolour one without the other. */
+.light .attn { background: rgb(255 255 255); color: rgb(0 0 0); }
+.light .attn li,
+.light .attn li p { color: rgb(0 0 0); }
 /* The compact mobile header can't afford the extra-wide cut. */
 .light .app-header .font-display { font-stretch: 100%; font-size: 16px; }
