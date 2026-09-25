@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="dark" id="theme-color-scheme" />
+  <!-- The app ships its own light and dark themes: declaring both stops browser auto-dark and Dark Reader from repainting it. -->
+  <meta name="color-scheme" content="light dark" />
+  <meta name="darkreader-lock" />
   <title>ParcelFlow Control Room</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,7 +21,6 @@
         ? stored
         : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
       if (theme === 'light') document.documentElement.classList.add('light');
-      document.getElementById('theme-color-scheme').setAttribute('content', theme);
     })();
   </script>
 </head>

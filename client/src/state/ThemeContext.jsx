@@ -23,7 +23,6 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle('light', theme === 'light');
-    document.getElementById('theme-color-scheme')?.setAttribute('content', theme);
   }, [theme]);
 
   useEffect(() => {

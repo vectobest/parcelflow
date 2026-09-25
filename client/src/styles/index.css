@@ -39,6 +39,8 @@
   --f-sans: 'Barlow', sans-serif;
   --f-display: 'Big Shoulders Display', 'Barlow', sans-serif;
   --f-stencil: 'Big Shoulders Stencil Display', 'Big Shoulders Display', sans-serif;
+
+  color-scheme: dark;
 }
 
 /* Light theme: "thermal label". The depot's most familiar object is the shipping label -- pure black print on
@@ -80,6 +82,9 @@
   --f-sans: 'Archivo', system-ui, sans-serif;
   --f-display: 'Archivo', system-ui, sans-serif;
   --f-stencil: 'Archivo', system-ui, sans-serif;
+
+  /* Still declares dark support: a plain `light` invites browser auto-dark to repaint this theme. */
+  color-scheme: light dark;
 }
 
 /* One family, Archivo; its width axis does the work. Display type runs extra-wide and heavy like a sort code,
