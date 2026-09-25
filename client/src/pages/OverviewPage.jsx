@@ -7,6 +7,8 @@ import Panel from '../components/Panel.jsx';
 import Button from '../components/Button.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Icon from '../components/Icon.jsx';
+import TrendChart from '../components/TrendChart.jsx';
+import { useTheme } from '../state/ThemeContext.jsx';
 
 const HEALTH_TONE = { HEALTHY: 'LOW', DEGRADED: 'MEDIUM', CRITICAL: 'HIGH' };
 
@@ -44,14 +46,14 @@ function SortLabel({ name, count, note, band, to }) {
   const body = (
     <>
       {band && <div className={`h-2 ${band}`} aria-hidden="true" />}
-      <div className="p-3 sm:p-4 flex flex-col gap-2 h-full">
+      <div className="p-4 sm:p-5 flex flex-col gap-3 h-full min-h-[150px]">
         <span className="flex flex-col" aria-label={name}>
-          <span className="tile-name font-display text-[20px] sm:text-[24px] leading-none text-on-surface" aria-hidden="true">{name.split(' ')[0]}</span>
-          {name.includes(' ') && <span className="tile-sub mt-1 text-[12px] leading-none text-on-surface" aria-hidden="true">{name.slice(name.indexOf(' ') + 1)}</span>}
+          <span className="tile-name font-display text-[22px] sm:text-[28px] leading-none text-on-surface" aria-hidden="true">{name.split(' ')[0]}</span>
+          {name.includes(' ') && <span className="tile-sub mt-1.5 text-[13px] leading-none text-on-surface" aria-hidden="true">{name.slice(name.indexOf(' ') + 1)}</span>}
         </span>
         <span className="mt-auto flex items-baseline gap-1.5 flex-wrap">
-          <span className="font-display text-[30px] leading-none tabular-nums text-on-surface">{count}</span>
-          <span className="text-[12px] text-on-surface-variant">{note}</span>
+          <span className="font-display text-[34px] sm:text-[40px] leading-none tabular-nums text-on-surface">{count}</span>
+          <span className="text-[13px] font-semibold text-on-surface-variant">{note}</span>
         </span>
       </div>
     </>
@@ -62,12 +64,52 @@ function SortLabel({ name, count, note, band, to }) {
     : <div className={className}>{body}</div>;
 }
 
+const departmentRank = (name) => { const i = DEPARTMENT_ORDER.indexOf(name.split(/\s+/)[0].toLowerCase()); return i === -1 ? DEPARTMENT_ORDER.length : i; };
+
+// Held parcels are counted under an insurance "department" too; they get their own tile and line instead.
+function orderedDepartments(snapshot) {
+  const counted = Object.keys(snapshot.departmentDistribution).filter((name) => !/insurance/i.test(name));
+  return (counted.length ? counted : DEFAULT_DEPARTMENTS).sort((a, b) => departmentRank(a) - departmentRank(b));
+}
+
+// Validated with the dataviz palette checker against each theme's card surface (#ffffff / #1b1916).
+const CHART_COLORS = {
+  light: { departments: ['#2a78d6', '#eb6834', '#1baf7a', '#008300', '#4a3aa7'], pending: '#eda100', error: '#d7261e' },
+  dark: { departments: ['#3987e5', '#d95926', '#199e70', '#008300', '#9085e9'], pending: '#c98500', error: '#d03b3b' }
+};
+const CHART_CHROME = {
+  light: { surface: '#ffffff', ink: '#000000', secondary: '#544a38', muted: '#7a7263', grid: '#ece7dc', baseline: '#bfb6a3' },
+  dark: { surface: '#1b1916', ink: '#ece5d6', secondary: '#a49c8c', muted: '#8a8374', grid: '#2e2b26', baseline: '#4a453c' }
+};
+
+// Running totals per outcome, one line each, in the same order and colours as the tiles above.
+function OutcomeTrend({ snapshot, trend }) {
+  const { theme } = useTheme();
+  const colors = CHART_COLORS[theme];
+  // Colour follows the department, never its position: mail, regular, heavy keep slots 1-3; any other department takes the next free slot.
+  let nextSlot = DEPARTMENT_ORDER.length;
+  const series = [
+    ...orderedDepartments(snapshot).map((name) => {
+      const rank = departmentRank(name);
+      const slot = rank < DEPARTMENT_ORDER.length ? rank : nextSlot++;
+      return { key: name, label: name.split(/\s+/)[0], color: colors.departments[slot % colors.departments.length] };
+    }),
+    { key: 'pending', label: 'Insurance check', color: colors.pending },
+    { key: 'error', label: "Couldn't be routed", color: colors.error }
+  ];
+  return (
+    <Panel icon="show_chart" title="Parcels over time">
+      <p className="text-[13px] text-on-surface-variant mb-3">Running total for each outcome, one step per batch.</p>
+      {trend.points.length < 2
+        ? <p className="text-[13px] text-on-surface-variant py-8 text-center">The chart starts after the first batch. Route a parcel or upload a batch from Intake.</p>
+        : <TrendChart title="Parcels over time" series={series} points={trend.points} chrome={CHART_CHROME[theme]} />}
+    </Panel>
+  );
+}
+
 // Light theme only: one label per outcome, the way a sort wall looks on the depot floor.
 function SortWall({ snapshot }) {
-  // Held parcels are counted under an insurance "department" too; they get their own label below instead.
-  const counted = Object.keys(snapshot.departmentDistribution).filter((name) => !/insurance/i.test(name));
-  const rank = (name) => { const i = DEPARTMENT_ORDER.indexOf(name.split(/\s+/)[0].toLowerCase()); return i === -1 ? DEPARTMENT_ORDER.length : i; };
-  const departments = (counted.length ? counted : DEFAULT_DEPARTMENTS).sort((a, b) => rank(a) - rank(b));
+  const departments = orderedDepartments(snapshot);
   return (
     <div className="light-only sort-wall grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       {departments.map((name) => (
@@ -99,7 +141,7 @@ export default function OverviewPage() {
   }, [handleError]);
 
   if (!dashboard) return <p className="text-[13px] text-on-surface-variant">Loading dashboard...</p>;
-  const { snapshot, risk, health, attentionRequired, scope } = dashboard;
+  const { snapshot, risk, health, attentionRequired, scope, trend } = dashboard;
   const ownView = scope === 'own';
 
   return (
@@ -116,11 +158,13 @@ export default function OverviewPage() {
       <SortWall snapshot={snapshot} />
 
       <div className="dark-only kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard hero bay="01" icon="package_2" tone="primary" label="Parcels Processed" value={snapshot.totalParcels} note={ownView ? (snapshot.totalParcels ? 'Submitted by you' : 'Route a parcel or upload a batch to start') : 'All operators'} />
+        <KpiCard bay="01" icon="package_2" tone="primary" label="Parcels Processed" value={snapshot.totalParcels} note={ownView ? (snapshot.totalParcels ? 'Submitted by you' : 'Route a parcel or upload a batch to start') : 'All operators'} />
         <KpiCard bay="02" icon="verified" tone="tertiary" label="Routed" value={snapshot.successful} note="Successfully dispatched" />
         <KpiCard bay="03" icon="pending_actions" tone="secondary" label="Awaiting Approval" value={snapshot.pendingApproval} note="In the approval queue" />
         <KpiCard bay="04" icon="warning" tone="error" label="Validation Errors" value={snapshot.validationErrors} note={snapshot.validationErrors > 0 ? 'Needs review' : 'None this session'} />
       </div>
+
+      <OutcomeTrend snapshot={snapshot} trend={trend} />
 
       {attentionRequired.length > 0 && (
         <section className="attn card rounded-card border border-error/40 bg-error-container/40 overflow-hidden" aria-labelledby="attention-heading">

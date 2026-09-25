@@ -34,6 +34,25 @@ export class DashboardService {
     };
   }
 
+  /**
+   * Running totals per outcome after each batch, oldest first, starting from zero. Keys are the routed
+   * department names plus `pending` (insurance holds) and `error`, so the last point always equals the
+   * snapshot's department counts, pendingApproval and validationErrors.
+   */
+  trend(limit = 60) {
+    const batches = [...this.#batchService.list()].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const totals = {};
+    const points = [{ at: null, batchId: null, parcels: 0, values: {} }];
+    for (const batch of batches) {
+      for (const { outcome } of batch.results) {
+        const key = outcome.status === 'routed' ? outcome.department : outcome.status === 'pending' ? 'pending' : outcome.status === 'error' ? 'error' : null;
+        if (key) totals[key] = (totals[key] || 0) + 1;
+      }
+      points.push({ at: batch.createdAt, batchId: batch.batchId, parcels: batch.results.length, values: { ...totals } });
+    }
+    return { points: points.slice(-(limit + 1)) };
+  }
+
   /** Everything the Overview page needs in one call: KPIs, health, what needs attention, and open incidents (section 26). */
   overview() {
     const snapshot = this.snapshot();
@@ -49,6 +68,6 @@ export class DashboardService {
 
     const health = openIncidents.some((i) => i.severity === 'CRITICAL') ? 'CRITICAL' : openIncidents.length || risk.level === 'HIGH' ? 'DEGRADED' : 'HEALTHY';
 
-    return { snapshot, risk, health, attentionRequired: attention, openIncidents: openIncidents.length, pendingApprovals: pendingApprovals.length };
+    return { snapshot, risk, health, attentionRequired: attention, openIncidents: openIncidents.length, pendingApprovals: pendingApprovals.length, trend: this.trend() };
   }
 }

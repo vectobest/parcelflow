@@ -158,6 +158,35 @@ test('a new operator starts with an empty dashboard even when other operators ha
   assert.equal(own.body.snapshot.totalParcels, 3);
 });
 
+test('the dashboard trend is a running total per outcome whose last point matches the snapshot', async () => {
+  const { app } = buildApp();
+  const operator = request.agent(app);
+  await operator.post('/api/auth/dev-login').send({ email: 'trend-op@example.com', role: 'OPERATOR' });
+  await operator.post('/api/batches').send({ parcels: [
+    { id: 'T-1', weight: 0.5, value: 20, destinationCountry: 'NL' },
+    { id: 'T-2', weight: 3, value: 1500, destinationCountry: 'DE' }
+  ], idempotencyKey: 'trend-1' });
+  await operator.post('/api/batches').send({ parcels: [
+    { id: 'T-3', weight: 20, value: 30, destinationCountry: 'NL' },
+    { id: 'T-4', weight: -1, value: 10, destinationCountry: 'NL' }
+  ], idempotencyKey: 'trend-2' });
+
+  const { body } = await operator.get('/api/dashboard');
+  const { points } = body.trend;
+  assert.equal(points.length, 3);
+  assert.deepEqual(points[0].values, {});
+  const last = points.at(-1).values;
+  assert.equal(last.pending, body.snapshot.pendingApproval);
+  assert.equal(last.error, body.snapshot.validationErrors);
+  for (const [department, count] of Object.entries(body.snapshot.departmentDistribution)) {
+    if (department !== 'Insurance Approval') assert.equal(last[department], count);
+  }
+
+  const other = request.agent(app);
+  await other.post('/api/auth/dev-login').send({ email: 'trend-other@example.com', role: 'OPERATOR' });
+  assert.equal((await other.get('/api/dashboard')).body.trend.points.length, 1);
+});
+
 test('an operator cannot read or retry another operator\'s batch by ID', async () => {
   const { app } = buildApp();
   const owner = request.agent(app);
