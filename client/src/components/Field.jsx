@@ -1,4 +1,4 @@
-const controlClass = 'w-full bg-surface-container-lowest rounded-sm border border-white/[0.1] hover:border-white/[0.18] focus:border-primary text-on-surface font-mono text-[13px] px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 transition-colors';
+const controlClass = 'field-control w-full bg-surface-container-lowest rounded-sm border border-white/[0.22] hover:border-white/[0.36] focus:border-primary text-on-surface font-mono text-[13px] px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 transition-colors';
 
 export function Field({ label, htmlFor, children }) {
   return (

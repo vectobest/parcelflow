@@ -359,3 +359,10 @@
 .light .drop-zone { border-color: rgb(0 0 0 / 0.28); }
 .light .drop-zone:hover { border-color: rgb(0 0 0 / 0.55); }
 .light .drop-zone.is-dragging { border-color: rgb(0 0 0); }
+
+/* Form controls always show their box, not just on focus: a clear literal border on white in light mode. */
+.light .field-control { background-color: rgb(255 255 255); border-color: rgb(0 0 0 / 0.32); color: rgb(0 0 0); }
+.light .field-control:hover { border-color: rgb(0 0 0 / 0.58); }
+.light .field-control:focus { border-color: rgb(0 0 0); box-shadow: 0 0 0 1px rgb(0 0 0); }
+.light .field-control::placeholder { color: rgb(84 74 56 / 0.75); }
+.light .field-control:disabled { background-color: rgb(244 242 236); }
