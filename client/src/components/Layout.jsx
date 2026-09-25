@@ -146,8 +146,8 @@ export default function Layout({ children }) {
                 <Icon name="hub" className="text-[24px]" />
               </div>
               <div className="flex flex-col min-w-0 leading-none">
-                <span className="font-display font-black text-[24px] tracking-[0.04em] text-white truncate uppercase">ParcelFlow</span>
-                <span className="font-mono text-[10px] text-on-surface-variant tracking-[0.14em] uppercase mt-1">Control Room · Dock 02</span>
+                <span className="font-display font-black text-[17px] tracking-[0.02em] text-white truncate uppercase">ParcelFlow</span>
+                <span className="font-mono text-[9px] text-on-surface-variant tracking-[0.1em] uppercase truncate mt-1">Control Room · Dock 02</span>
               </div>
             </div>
             <div className="h-1.5 hazard-stripe" />
