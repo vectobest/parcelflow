@@ -1,169 +1,544 @@
-# ParcelFlow Control Room
+# ParcelFlow – Parcel Routing System
 
-A parcel routing system rebuilt as a MERN-style application (MongoDB deliberately omitted -- see [ADR-007](docs/decisions/ADR-007-in-memory-persistence.md)): **Express + Node** API, **React** client, real **Google OAuth**. It doesn't just route parcels -- it explains every decision, makes policy changes safe to evolve, and gives an operator (or an admin) the tools to investigate when something goes wrong.
+ParcelFlow routes parcels to the right department based on weight and value. It is built for the people who use it every day: operators who enter and upload parcels, reviewers who approve high-value parcels, and admins who change the routing rules.
 
-> This repository previously contained a different, vanilla-JS implementation of the same assessment brief in `backend/`/`frontend/`. It was replaced with this MERN rewrite at the user's request; the prior version remains in git history.
+Routing a parcel is the easy part. Most of the work in this project went into what surrounds it:
 
-## 1. Product overview
+- every decision explains why it was made
+- rule changes can be previewed and rolled back
+- the team can see when something is going wrong
+- every important action is recorded
 
-The system answers the questions an operations team actually asks:
+---
 
-- **What happened?** Every routing decision cites the rule that matched, the policy version active at the time, and the evaluated conditions ([Decision Explainability](#decision-explainability)).
-- **What needs attention?** The Overview page surfaces health, KPIs and an explicit "needs attention" list -- not just raw numbers.
-- **What if we change a rule?** [Policy Blast Radius](#policy-lifecycle--blast-radius) replays a candidate policy against every parcel actually processed, before it can go live.
-- **Can we reproduce a past decision?** [Decision Replay](#decision-replay) and the [Time Machine](#time-machine) reconstruct exactly what the system knew at any point in the session.
-- **Is something going wrong?** [Risk & Predictions](#risk--predictions-heuristic-detection-optional-gemini-narration), the [Incident Center](#incident-center), and [Failure DNA](#failure-dna) group and explain failures instead of raising one alert per parcel.
-- **What happens if volume spikes?** The [Digital Twin](#digital-twin) projects capacity impact without touching production.
-- **Is it actually secure?** The [Security Center](#security--chaos-drills) runs real attack payloads against the real security code, live, and reports whether each was blocked.
+## Contents
 
-## 2. Architecture at a glance
+1. [Getting started](#getting-started)
+2. [Architecture](#architecture)
+3. [How routing works](#how-routing-works)
+4. [Adding a new routing rule](#adding-a-new-routing-rule)
+5. [Changing rules safely](#changing-rules-safely)
+6. [The user interface](#the-user-interface)
+7. [Testing](#testing)
+8. [Monitoring and reliability](#monitoring-and-reliability)
+9. [Security](#security)
+10. [Debugging approach](#debugging-approach)
+11. [Architecture decisions and trade-offs](#architecture-decisions-and-trade-offs)
+12. [AI usage](#ai-usage)
+13. [Known limitations](#known-limitations)
 
-```
-client/   React (Vite) -- pages, a small design system, AuthContext/ModeContext
-server/   Express (Node, ESM) -- domain/service layers, in-memory repositories, Passport OAuth
-```
+---
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full breakdown (module responsibilities, data flow, the domain model, and why this stayed in-memory instead of adding MongoDB).
+## Getting started
 
-### SOLID in practice
-
-- **SRP** -- `RoutingEngine` only runs rules; `PolicyService` only manages the lifecycle; `AuditService` only appends; `RetryService`, `IncidentDetectorService`, `FailureDnaService`, `DigitalTwinService` are each one concern, not folded into a god service.
-- **OCP** -- new routing rules are added via `RoutingEngine.addRule()`, no edits to the engine itself (`server/src/routing/rules/*`).
-- **LSP** -- every routing rule extends `RoutingRule` and returns a `RoutingDecision` or `null`; every repository extends its abstract base (`PolicyRepository`, `BatchRepository`, ...).
-- **ISP** -- `PolicyRepository`, `BatchRepository`, `AuditRepository` are each a 2-3 method contract, not one god repository interface.
-- **DIP** -- every service receives its dependencies through its constructor (see `server/src/container.js`, the single composition root). Nothing reaches into `process.env`, a database driver, or `fetch` directly.
-
-## 3. Running it
-
-Prerequisites: Node 20+.
+**You need:** Node.js 20 or newer.
 
 ```bash
-npm install                      # installs both workspaces
-cp server/.env.example server/.env
-npm run dev                      # server on :4000, client on :5173 (concurrently)
+npm install                        # installs the server and the client
+cp server/.env.example server/.env # create your local settings
+npm run dev                        # starts the server (port 4000) and the client (port 5173)
 ```
 
-Open http://localhost:5173. Without Google OAuth configured, a **local dev sign-in** stands in (pick an email + role) -- see [Authentication](#authentication--rbac). The active policy starts at `v1` (Mail <=1kg, Regular <=10kg, Heavy above; insurance approval above EUR1000).
+Open http://localhost:5173.
 
-Run the test suites:
+Without Google sign-in configured, the app signs you in as a local admin so you can try everything straight away.
 
-```bash
-npm test              # server: 77 unit/integration/security/invariant tests (node:test)
-npm run test:client   # client: 9 component tests (vitest)
+**Project layout**
+
+```
+server/   Node.js + Express API: routing, policies, approvals, security
+client/   React app (Vite + Tailwind): the screens operators use
+docs/     Threat model and architecture decision notes
 ```
 
-### Enabling real Google OAuth
+**Optional settings** (in `server/.env`)
 
-1. Create an OAuth 2.0 Client ID at https://console.cloud.google.com/apis/credentials (type: Web application).
-2. Authorized redirect URI: `http://localhost:4000/api/auth/google/callback`.
-3. Set `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in `server/.env`.
-4. Restart the server. The login page switches from local dev sign-in to a real "Sign in with Google" button automatically -- and **dev sign-in is refused by the server** the moment OAuth is configured (see [ADR-006](docs/decisions/ADR-006-oauth-with-dev-fallback.md)), so there's no accidental backdoor on a real deployment.
+| Setting | What it does |
+|---|---|
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Turns on real "Sign in with Google". Local sign-in is switched off automatically once these are set. |
+| `ADMIN_EMAILS`, `REVIEWER_EMAILS` | Gives these people a higher role the first time they sign in. Everyone else starts as an operator. |
+| `GEMINI_API_KEY` | Turns on AI wording for the assistant and risk summary. The app works fully without it. |
+| `MAX_UPLOAD_BYTES`, `MAX_BATCH_SIZE` | Upload limits (defaults: 5 MB and 5,000 parcels). |
 
-Optionally set `ADMIN_EMAILS` / `REVIEWER_EMAILS` (comma-separated) so specific accounts get elevated roles on first sign-in; everyone else starts as `OPERATOR`.
+## Architecture
 
-### Enabling real Gemini reasoning (optional)
+### How the pieces fit together
 
-The Operations Assistant and Risk engine work fully without this -- see [Operations assistant](#operations-assistant) and [Risk & Predictions](#risk--predictions-heuristic-detection-optional-gemini-narration) below. To turn on the Gemini-backed path:
+The browser app only talks to the server through `/api`. Every request passes through the same security checks before it reaches the part of the server that handles it. The routing rules always read the currently active policy, and every change is written to the audit log.
 
-1. Get a key at https://aistudio.google.com/apikey.
-2. Set `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`, default `gemini-3.6-flash`) in `server/.env`.
-3. Restart the server. Both features switch over automatically; every response they return carries `source: "gemini" | "heuristic"`, shown as a small badge in the UI.
+```mermaid
+flowchart TB
+    UI["Browser: React app<br/>Overview, Intake, Approvals, Policy,<br/>Risk, Incidents, Admin screens"]
+    Google(["Google sign-in"])
 
-**Free-tier note:** Google's free tier for `generativelanguage.googleapis.com` caps `gemini-3.6-flash` at roughly 5 requests/minute *and* 20 requests/day per project (confirmed live via the `RESOURCE_EXHAUSTED` error body, which names both `GenerateRequestsPerMinutePerProjectPerModel-FreeTier` and `GenerateRequestsPerDayPerProjectPerModel-FreeTier`). A `429` while testing is expected once you exceed either, not a bug. The SDK also appears to retry internally on 429/503 before giving up, so a single request can take well over a minute under quota contention. Either way, the app keeps working -- it falls straight back to the deterministic path and marks the response `source: "heuristic"`.
+    subgraph Server["Server: Node.js + Express"]
+        Gate["Security checks<br/>headers, rate limit, sign-in session,<br/>role check, request ID"]
 
-## 4. Feature tour
+        subgraph Core["Parcel handling"]
+            direction LR
+            Upload["Upload checker<br/>size, format, safe parsing"] --> Batch["Batch processing<br/>no duplicates"]
+            Batch --> Engine["Routing rules<br/>checked in order"]
+            Batch --> Approvals["Insurance approvals"]
+            Retry["Retry failed parcels"] --> Engine
+        end
 
-### Decision explainability
-Every routing outcome (`RoutingDecision`) carries `matchedRule`, `reason`, `evaluatedConditions`, `policyVersion` and a `timestamp` -- shown in the Intake results table and reusable everywhere a decision appears (Approvals, Replay, the Assistant).
+        subgraph Rules["Rule management"]
+            direction LR
+            Policy["Policies<br/>draft, validate, approve, activate"]
+            Preview["Conflict check, impact preview,<br/>simulator, replay"]
+        end
 
-### Policy lifecycle & blast radius
-Policies are immutable value objects (`server/src/domain/Policy.js`) that move `DRAFT -> VALIDATED -> APPROVED -> ACTIVE -> (ROLLED_BACK)`. An `ACTIVE` policy can never be mutated -- every change is a new version. Before activating a candidate, **Policy Manager** can check:
-- **Rule conflicts** (`RuleConflictDetector`) -- overlapping weight tiers, a mail tier that can never be reached, an insurance threshold so low it swallows every other rule.
-- **Blast radius** (`PolicyBlastRadiusService`) -- replays the candidate against *every parcel actually processed this session*, not a sample, and reports how many decisions would change.
+        subgraph Watch["Monitoring"]
+            direction LR
+            Dashboard["Dashboard and trend"]
+            Risk["Risk and failure patterns"]
+            Incidents["Incident detection"]
+            Assistant["Ops assistant"]
+        end
 
-### Decision replay
-Pick any batch you've processed and replay it against a different policy version (**Decision Replay** page) to see exactly which parcels would be routed differently. Built on the same `RoutingEngine` as production traffic, so a replay can never drift from what actually happens.
+        Audit["Audit log<br/>append-only"]
+        Store[("In-memory storage<br/>batches, approvals, policies,<br/>incidents, users, audit")]
+    end
 
-### Risk & Predictions (heuristic detection, optional Gemini narration)
-`RiskService` and `FailureDnaService` are transparent statistical heuristics over the current session's batches -- rising failure rate, growing approval backlog, failure fingerprinting with a trend. They explicitly report `INSUFFICIENT_DATA` rather than inventing a signal from too little history. The `level`, `confidence` and `evidence` are *always* this heuristic's own output; when `GEMINI_API_KEY` is set, `AiRiskNarrator` only rewrites the `message` into plainer language from that same evidence -- it can never change the score or invent a fact (see [ADR-009](docs/decisions/ADR-009-gemini-integration-boundaries.md)).
+    AI(["AI service<br/>optional, read-only"])
 
-### Incident center
-`IncidentDetectorService` groups related failures into one incident instead of one alert per parcel, with a minimum batch size before it will ever fire (a 2-parcel test batch can't manufacture a false incident) and a likely-cause citation from Failure DNA -- called "likely cause," never "root cause," since that's what the evidence actually supports.
+    UI -- "JSON over HTTPS" --> Gate
+    Gate <--> Google
+    Gate --> Core
+    Gate --> Rules
+    Gate --> Watch
+    Engine -- "reads the active policy" --> Policy
+    Preview -- "uses the same rules" --> Engine
+    Batch -- "after each batch" --> Incidents
+    Core -- "every change" --> Audit
+    Rules -- "every change" --> Audit
+    Core --> Store
+    Rules --> Store
+    Watch --> Store
+    Audit --> Store
+    Watch -. "explains results in plain words" .-> AI
+```
 
-### Digital twin
-A linear, clearly-labeled ("SIMULATION -- NOT PRODUCTION") capacity projection over volume/processing-speed/reviewer-capacity/failure-rate multipliers. Never a trained model, and says so in its own output.
+### What happens to a parcel
 
-### Security & chaos drills
-Admin-only, in **Security Center**:
-- The **security drill** runs 8 real hostile inputs (oversized upload, malformed XML, an XXE-shaped payload, prototype pollution, unauthorized policy activation, unauthorized approval, invalid authentication, a replayed idempotency key) against the actual `SecureBatchParser` / `AuthorizationService` / `AuthenticationService` / `IdempotencyStore` code and reports whether each was genuinely blocked -- not a scripted narrative.
-- The **chaos drill** synthesizes a failure and walks it through the real `IncidentDetectorService` and `AuditService`, tagged `drill: true` throughout, so the FAILURE -> DETECTION -> INCIDENT -> AUDIT lifecycle it demonstrates is genuine machinery -- but it never creates a real batch, policy or approval.
+This is the path from upload to a final decision. A single parcel entered by hand follows the same path from "Validate" onwards.
 
-### Time machine
-`SystemHistoryService` reconstructs system state (active policy, failure rate, approval queue size, open incidents) at any past timestamp, derived from the timestamps the app already recorded -- no separate snapshot store to keep in sync or drift out of.
+```mermaid
+flowchart TD
+    A["Operator uploads a JSON or XML file"] --> B{"File under 5 MB?"}
+    B -- No --> X1["Rejected with a clear message"]
+    B -- Yes --> C["Read the file safely<br/>no embedded XML definitions,<br/>no harmful field names"]
+    C --> D{"1 to 5,000 parcels?"}
+    D -- No --> X2["Rejected with a clear message"]
+    D -- Yes --> E{"Same upload already processed?"}
+    E -- Yes --> X3["Original result returned,<br/>nothing processed twice"]
+    E -- No --> F["For each parcel"]
 
-### Operations assistant
-Without `GEMINI_API_KEY`: a fixed set of recognized question patterns, answered only from live application data, always citing the specific IDs it used -- an unrecognized question gets an honest "I can't answer that," never a guess. With it: `AiOperationsAssistantService` lets Gemini reason about which of a handful of read-only tools (get a policy, a batch, an incident, the risk assessment, a digital-twin projection...) to call, but it can only state facts those tools actually returned, must cite the IDs, and falls straight back to the deterministic pattern-matcher above if it ever fails to produce a grounded answer. See [AI_USAGE.md](AI_USAGE.md) and [ADR-009](docs/decisions/ADR-009-gemini-integration-boundaries.md).
+    F --> V{"Weight, value and<br/>country valid?"}
+    V -- No --> R1["Couldn't be routed<br/>reason recorded"]
+    V -- Yes --> I{"Value over the<br/>insurance limit?"}
+    I -- Yes --> H["Held for insurance approval"]
+    H --> Rev{"Reviewer decision"}
+    Rev -- Approve --> W
+    Rev -- Reject --> R2["Rejected"]
+    I -- No --> W{"Weight"}
+    W -- "up to 1 kg" --> M["Mail Department"]
+    W -- "up to 10 kg" --> G["Regular Department"]
+    W -- "over 10 kg" --> Hv["Heavy Department"]
 
-### Authentication & RBAC
-Real Passport Google OAuth 2.0, session-cookie based. Three roles -- `OPERATOR`, `REVIEWER`, `ADMIN` -- enforced **server-side** in `AuthorizationService` (every controller calls `assertPermission`/`assertRole`; the client never gets to decide what it's allowed to do). Access Control (admin-only) lists everyone who has signed in and lets an admin change roles live.
+    M & G & Hv & R1 & R2 --> S["Batch saved with every decision<br/>and its reason"]
+    S --> Au["Written to the audit log"]
+    S --> Inc{"Failure rate much<br/>higher than usual?"}
+    Inc -- Yes --> Open["Incident opened with likely cause"]
+    Inc -- No --> Dash["Dashboard updated"]
+    Open --> Dash
+```
 
-## 5. Security
+### How a rule change goes live
 
-See [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) for the full threat model. Highlights:
+```mermaid
+flowchart LR
+    D["Draft<br/>admin creates a new version"] --> V["Validated<br/>checked for mistakes"]
+    V --> P["Approved"]
+    P --> C{"Conflict check and<br/>impact preview look right?"}
+    C -- No --> D
+    C -- Yes --> Act["Active<br/>used for all new parcels"]
+    Act -- "problem found" --> RB["Rolled back<br/>previous version active again"]
+```
 
-- **XXE / entity expansion**: `fast-xml-parser` has no DTD/entity-resolution engine at all (not just disabled by a flag), and any payload containing `<!DOCTYPE` / `<!ENTITY` is rejected outright before parsing, as a second layer.
-- **Prototype pollution**: uploaded JSON/XML is checked for `__proto__`/`constructor`/`prototype` keys before anything downstream touches it (`fast-xml-parser` itself also refuses those as tag names).
-- **Size limits**: uploads are rejected by byte size *before* parsing (`MAX_UPLOAD_BYTES`), and by record count after.
-- **RBAC**: enforced in `AuthorizationService`, called from every mutating controller and from the services themselves (defense in depth -- a controller bug can't bypass it).
-- **Rate limiting**: a stricter limiter on `/api/auth/*` than the rest of the API.
-- **Secure headers**: `helmet` with an explicit CSP; no inline scripts.
-- **No secrets in the client**: OAuth client secret, session secret, Gemini API key and admin email allowlist all live server-side only (`server/.env`, gitignored). The client never sees `GEMINI_API_KEY`; it only ever talks to `POST /api/assistant/ask` and `GET /api/risk` on our own server, which calls Gemini itself.
-- **Audit trail**: append-only (`InMemoryAuditRepository.add` never removes or edits), admin-only to read.
-- **Error handling**: unknown errors are logged with full detail server-side but the client only ever sees a generic message + correlation ID -- never a stack trace.
+---
 
-Run the security drill (Security Center, as an admin) to see these controls exercised live.
+## How routing works
 
-## 6. Testing strategy
+Each parcel has a weight, a declared value and a destination country, plus optional extra details such as the recipient's address.
 
-85 server tests (`npm test`, Node's built-in test runner) across `server/tests/{unit,integration,security,invariants}`:
-- **Unit**: routing engine, policy lifecycle, rule conflicts, blast radius, batching, approvals, retry classification, risk heuristics, incident detection, failure DNA, digital twin, the operations assistant, and the Gemini tool-calling/fallback/grounding logic (against a scripted fake client -- no API key needed to run the suite).
-- **Integration** (`supertest` against the real Express app): auth flow, RBAC over HTTP, the dev-login backdoor being refused once OAuth is configured, oversized/malformed uploads rejected at the HTTP layer.
-- **Security**: XXE, prototype pollution, oversized uploads, malformed input, RBAC, the security drill itself.
-- **Invariants**: six explicitly named tests for the properties that must never break (see `server/tests/invariants/invariants.test.js`) -- an invalid parcel never routes normally, an active policy is never silently mutated, retry never double-processes, simulation never touches production state, an unauthorized role never activates a policy, every state change is audited.
+The default rules are:
 
-9 client tests (`npm run test:client`, Vitest + Testing Library): the sample-batch generator, the command palette's filtering, and the login flow's dev sign-in path.
+| Condition | Result |
+|---|---|
+| Missing or invalid weight, value or country | Rejected with a clear reason |
+| Value over €1,000 | Held for insurance approval |
+| Up to 1 kg | Mail Department |
+| Up to 10 kg | Regular Department |
+| Over 10 kg | Heavy Department |
 
-**What's not covered**: no browser-automation (Playwright/Cypress) end-to-end suite is checked in. The full click-through flow (login -> intake -> approvals -> policy lifecycle -> replay -> risk -> incidents -> digital twin -> assistant -> security drill -> audit -> access control -> command palette -> mobile layout) was verified manually via a headless-Chrome DevTools Protocol session during development, not as a repeatable CI suite -- a real next step (see [Known limitations](#8-known-limitations--future-improvements)).
+The rules run in this order, and the first one that applies decides the outcome.
 
-## 7. AI usage
+Validation always runs first, so bad data is never routed by guesswork. The insurance check runs before the weight rules, so an expensive parcel is always held for a person to look at. Once a reviewer approves it, it is routed by weight as usual.
 
-See [AI_USAGE.md](AI_USAGE.md).
+The limits (1 kg, 10 kg, €1,000) and the department names are not written into the code. They come from the **active policy**, which an admin can change from the Policy Manager screen.
 
-## 8. Known limitations & future improvements
+Every decision records:
 
-- **No database.** Explicitly requested this way (see [ADR-007](docs/decisions/ADR-007-in-memory-persistence.md)) -- all state is in-memory and lost on restart. A real deployment would swap the `InMemoryXRepository` classes for MongoDB-backed ones behind the same repository interfaces; nothing else would need to change.
-- **Risk/incident heuristics are session-scale.** They work well within one server run but have no long-term historical baseline across restarts (again, a consequence of no persistence).
-- **No E2E test automation checked in**, per the note above.
-- **Without `GEMINI_API_KEY`, the Operations Assistant's question set is fixed.** Extending it means adding a new pattern to `OperationsAssistantService`. With a key, Gemini can handle a much wider range of phrasings, but it's still bounded to the same handful of read-only tools -- a genuinely new *kind* of question still needs a new tool.
-- **Digital Twin is a linear projection**, not a queueing-theory or ML model -- fine as an order-of-magnitude estimate, not a capacity-planning guarantee.
-- **Single-process rate limiting / session store.** `express-rate-limit`'s default store and `express-session`'s `MemoryStore` are per-process; a multi-instance deployment would need a shared store (Redis) for both.
-- Natural next step if this became a real product: MongoDB persistence behind the existing repository interfaces, a Redis-backed session/rate-limit store for horizontal scaling, and a checked-in Playwright E2E suite.
+- the rule that matched
+- the reason, in plain words ("Parcel value EUR 1500 exceeds EUR 1000 insurance threshold.")
+- the numbers that were compared
+- the policy version that was active at the time
 
-## 9. Extending the routing rules
+This means anyone can later see exactly why a parcel went where it did, even after the rules have changed.
+
+---
+
+## Adding a new routing rule
+
+Each rule is a small class in `server/src/routing/rules/`. The routing engine simply runs them in order. Adding a rule does not require changing the engine or any existing rule.
+
+**Example:** send parcels for the Netherlands to a new "Express NL" department.
+
+1. Create the rule:
 
 ```js
 // server/src/routing/rules/ExpressCountryRule.js
+import { RoutingRule } from '../RoutingRule.js';
+import { RoutingDecision } from '../../domain/RoutingDecision.js';
+
 export class ExpressCountryRule extends RoutingRule {
-  evaluate(parcel, policy, context) {
-    if (parcel.destinationCountry !== 'NL') return null;
-    return RoutingDecision.routed({ policy, parcel, department: 'Express NL', matchedRule: 'EXPRESS_NL', reason: '...' });
+  evaluate(parcel, policy) {
+    if (parcel.destinationCountry !== 'NL') return null; // not my case, let the next rule decide
+    return RoutingDecision.routed({
+      policy, parcel,
+      department: 'Express NL',
+      matchedRule: 'EXPRESS_NL',
+      reason: 'Parcel is going to the Netherlands.'
+    });
   }
 }
 ```
 
+2. Register it where the engine is set up (`server/src/container.js`), choosing where it sits in the order:
+
 ```js
-// server/src/container.js
 routingEngine.addRule(new ExpressCountryRule(), { before: 'MailWeightRule' });
 ```
 
-No other file changes. Add a matching unit test in `server/tests/unit/routing.test.js`.
+3. Add a test in `server/tests/unit/routing.test.js` for the new case and for the cases it must **not** affect.
+
+4. Run `npm test`. The existing routing tests confirm nothing else changed.
+
+To change a limit rather than add a rule (for example, raise the insurance threshold), no code is needed at all. Create a new policy version in the Policy Manager.
+
+---
+
+## Changing rules safely
+
+A wrong rule change can send thousands of parcels to the wrong place, so rule changes follow a fixed process.
+
+**1. Versions, not edits.** A live policy can never be edited. Every change is saved as a new draft version.
+
+**2. Step-by-step approval.** A draft moves through these stages, and none can be skipped:
+
+```
+Draft → Validated → Approved → Active
+```
+
+An invalid policy can never become active. Only admins can manage policies.
+
+**3. Conflict check.** Before activating, the system warns about rules that don't make sense, for example:
+- a mail limit that is not lower than the regular limit
+- an insurance threshold of zero, which would send every parcel to approval
+
+**4. Impact preview.** The system re-runs the new policy against **every parcel already processed** and shows how many decisions would change, and which parcels would newly need approval.
+
+**5. Rollback.** If something still goes wrong, one click brings back the previous version.
+
+**6. Replay.** Any past batch can be re-run under any policy version to compare results. This uses the same routing code as live traffic, so the preview can't differ from what would really happen.
+
+Every step is recorded in the audit log with who did it and when.
+
+---
+
+## The user interface
+
+The app is built for non-technical operators:
+
+- plain language, with technical details hidden in expandable sections
+- clear status labels
+- people's names instead of email addresses
+
+### Main screens
+
+| Screen | What it's for |
+|---|---|
+| Dispatch Overview | Counts per department, a chart of parcels over time, and what needs attention right now |
+| Intake | Enter one parcel, upload a file, or generate a sample batch |
+| Approvals | Reviewers approve or reject high-value parcels |
+| Policy Manager | Create, check, activate and roll back routing rules |
+| Impact Simulator / Decision Replay | Preview rule changes on sample or past parcels |
+| Risk, Incidents, Digital Twin | Spot problems and test "what if volume doubles?" |
+| Ops Assistant | Ask questions like "Why are approvals growing?" |
+| Audit Log, Security Center, Access Control | Admin tools |
+
+### Why JSON and XML
+
+I support both formats.
+
+- **JSON** is simple to create and read, and it is what most modern systems export.
+- **XML** is supported because real depot files often come in XML. The app reads the "container" format used for shipments, where each parcel has a recipient address. That format has no country field, so the country is set to NL only when the postcode is clearly Dutch (for example `4744AT`). Anything else is rejected instead of guessed.
+
+### Handling large files
+
+- Files can be dropped onto the upload area or chosen normally.
+- The server checks the file size (5 MB) and parcel count (5,000) before doing any real work.
+- While a file is processed, an animation shows the current step ("Reading the file", "Checking and routing parcels"). It doesn't show a fake progress percentage.
+- Results tables show the first 100 rows so the page stays fast.
+- The same file can't be processed twice by accident.
+
+### Other details
+
+- Works on desktop and mobile. On small screens the sidebar becomes a drawer.
+- Light and dark themes, following the device setting until the user picks one.
+- Keyboard shortcut Cmd/Ctrl + K to jump to any screen.
+- Animations are reduced for users who ask for less motion.
+
+---
+
+## Testing
+
+Run the tests with:
+
+```bash
+npm test             # 96 server tests
+npm run test:client  # 13 client tests
+```
+
+### What the tests cover
+
+- **Routing logic:** every rule, the edges of each limit (exactly 1 kg, exactly 10 kg, exactly €1,000), invalid input, and rule order
+- **Policies:** each lifecycle step, the rule that live policies can't be edited, conflict checks and rollback
+- **Approvals and retries:** approving, rejecting, deciding twice, and retrying failed parcels
+- **HTTP tests:** the real server is started and called like a browser would, covering sign-in, permissions, uploads and per-user data
+- **Security:** oversized files, broken XML, harmful XML, and users trying actions their role doesn't allow
+
+### Protecting against regressions
+
+Six tests guard rules that must never break:
+
+- an invalid parcel is never routed normally
+- a live policy is never changed silently
+- a retry never processes a parcel twice
+- a simulation never changes real data
+- an operator can never activate a policy
+- every change is written to the audit log
+
+If a future change breaks any of these, the test run fails before the change can be merged.
+
+### From branch to merge: a small example
+
+This is the process I follow for a change such as the Express NL rule above:
+
+```bash
+git checkout -b feature/express-nl-rule
+# 1. write the tests first: NL parcels go to Express NL, other countries are unchanged
+# 2. add the rule class and register it
+npm test && npm run test:client     # everything must pass
+git add server/src/routing/rules/ExpressCountryRule.js server/src/container.js server/tests/unit/routing.test.js
+git commit -m "Add Express NL routing rule"
+git push -u origin feature/express-nl-rule
+# 3. open a pull request, describe the change and its impact, and get it reviewed
+# 4. merge once the review is approved and the tests pass
+```
+
+For a threshold change instead of a code change, the "review" step happens inside the app: draft, conflict check, impact preview, approve, activate.
+
+### Checking correctness beyond automated tests
+
+- **Using the app in a real browser.** After each change I click through the affected screens, in both themes and on a phone-sized screen. This found real bugs the tests had missed, such as requests being sent with the wrong method.
+- **Real data.** I uploaded an actual shipment file and checked every result by hand.
+- **Impact preview and replay.** These let a person check a rule change against real parcels before it goes live.
+- **Live security check.** The Security Center fires eight real attack attempts at the running app and shows whether each was blocked.
+
+---
+
+## Monitoring and reliability
+
+The goal: when something goes wrong, the team notices, and has enough information to find and fix it.
+
+### Being notified
+
+- **Needs attention now.** The Overview lists open incidents, a growing approval backlog, and batches that partly failed.
+- **Incidents.** When the failure rate of a batch jumps well above normal, an incident opens on its own. Related failures are grouped into one incident instead of one alert per parcel. Tiny test batches can't trigger one.
+- **Risk panel.** This flags trends such as validation failures rising over recent batches. When there isn't enough data, it says so instead of guessing.
+
+### Investigating
+
+- **Likely cause.** Each incident shows a likely cause, found by grouping failures by type (for example "missing weight"), plus suggested next steps.
+- **Request IDs.** Every request gets its own ID. It appears in the server logs, the audit log and any error message a user sees, so one report can be traced end to end.
+- **Structured logs.** Server logs are written as JSON lines, ready to send to a log tool.
+- **Audit log.** It records who did what, when, and what changed. Entries can't be edited or deleted.
+- **Time Machine.** The System Health screen shows what the system looked like at any earlier moment: the active policy, failure rate, queue size and open incidents.
+
+### Staying reliable
+
+- The same upload can't be processed twice, even if it's sent twice at the same time.
+- Retrying failed parcels is limited to three attempts. Each parcel is marked as fixed, needing a human, or given up on, so bad data isn't retried forever.
+- The server limits how many requests it handles at once, and how many each user can send per minute.
+- If the AI service is down or out of quota, the app switches to its built-in answers and tells the user why.
+
+**For production, I would add:**
+- sending logs and incidents to an alerting tool (such as a Slack channel or an on-call pager)
+- an uptime check on the `/api/health` endpoint
+
+---
+
+## Security
+
+The app is designed to face the public internet.
+
+### Already in place
+
+| Threat | Protection |
+|---|---|
+| Harmful or oversized uploads | Size limit checked before reading the file; XML with embedded definitions is refused; the XML reader cannot load external files; suspicious field names (`__proto__`) are rejected |
+| Someone doing things their role doesn't allow | Three roles (operator, reviewer, admin), checked on the server for every action, never in the browser |
+| Seeing other people's data | Operators only see their own parcels; guessing another batch's ID returns "not found" |
+| Password guessing and flooding | Rate limits (300 requests per minute, 20 sign-in attempts per 15 minutes) and a cap on requests handled at once |
+| Session theft | Secure, HTTP-only session cookies that expire after 8 hours |
+| Accidental backdoor | Local test sign-in is refused once Google sign-in is set up |
+| Leaking internal details | Users see a simple error plus a request ID; full details stay in the server logs |
+| Secret keys | Stored only on the server, never sent to the browser |
+| Script injection | Strict browser security headers (Content Security Policy) |
+
+More detail is in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
+
+### What I would add next, and why
+
+- **HTTPS everywhere with a web application firewall.** Encrypts traffic and blocks common attacks before they reach the app.
+- **A secrets manager instead of an `.env` file.** Keys can be rotated and access is logged.
+- **A shared store (Redis) for sessions and rate limits.** Protection keeps working when more than one server runs.
+- **CSRF tokens.** An extra layer on top of the current cookie settings for form submissions.
+- **Automatic dependency scanning** (e.g. Dependabot). Known security issues in libraries are caught early.
+- **A real database with backups and access controls.** Data survives restarts and can be restored.
+- **Regular penetration testing.** Someone outside the team tries to break in.
+
+---
+
+## Debugging approach
+
+When I get a buggy routing function, I:
+
+1. **Reproduce it.** I write a failing test with a clear example, such as "a 1 kg parcel should go to Mail".
+2. **Check the edges first.** Most routing bugs are at boundaries: `<` instead of `<=`, rules in the wrong order, or text read as numbers ("10" vs 10).
+3. **Fix the root cause.** I fix it in one place, not with a special case.
+4. **Keep the test.** The failing test stays in the suite so the bug can't come back.
+5. **Prevent the whole class of bug.** For example, validate input types up front and add tests for every limit.
+
+This project follows the same habits. The boundary tests in `server/tests/unit/routing.test.js` exist for exactly this reason.
+
+---
+
+## Architecture decisions and trade-offs
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Routing as a list of small rules run in order | New rules can be added without touching existing ones | Rule order matters and must be tested |
+| Versioned policies that can't be edited once live | Every past decision can still be explained; rollback is easy | Every small change needs a new version |
+| Rule limits stored in the policy, not in code | Business users can change limits without a release | New kinds of conditions still need a new rule in code |
+| No database; data kept in memory | Simple to run and review; storage sits behind small interfaces so a database can be added later | Data is lost when the server restarts |
+| Google sign-in, with a local sign-in only for development | Real security in production; easy to try locally | Needs a Google project to be set up for real use |
+| Risk detection uses simple, visible rules, not machine learning | Easy to understand and check; honest about limited data | Less clever than a trained model |
+| AI is optional and can only explain, never act | The app never depends on AI and can't make unsafe changes | AI answers are limited to what the built-in tools can look up |
+| The same routing code runs for simulations and live traffic | Previews always match reality | None worth noting |
+
+Longer notes on each decision are in [docs/decisions/](docs/decisions/).
+
+---
+
+## AI usage
+
+I used an AI assistant at several points in this project, mainly as a research tool. I stayed in charge of the work throughout: I decided what to build and how, made the design decisions, and reviewed, changed and tested everything before keeping it.
+
+### How I used it
+
+- **Research before deciding.** I compared approaches for:
+  - making routing rules changeable without code changes
+  - reading uploaded XML safely
+  - stopping the same file from being processed twice
+  - grouping many failures into one incident
+- **Investigating problems.** When something behaved unexpectedly, I used it to help trace the cause, then chose the fix myself.
+- **Drafting.** It produced first versions of some code, tests and documentation. I reviewed each one, rewrote parts that didn't fit the design, and tested the result in the app.
+
+Product decisions were never left to the AI: what each role may do, how rule changes are approved, and how uncertain data is handled.
+
+### Example prompts and what I decided
+
+**1. Data visible to new users**
+> "Why is data showing 243 parcels even for a new user who hasn't uploaded anything? Fix this."
+
+- **Finding:** all users were reading from one shared data store.
+- **My decision:** I compared three options (per-user, per-role, shared) and chose per-role. Operators see only their own data. Reviewers and admins see everything, because reviewers must approve other people's parcels.
+- **How I checked it:** I signed in as a brand-new operator and confirmed the dashboard started empty.
+
+**2. A real shipment file failing to upload**
+> "Uploading gives the error 'parcels not between 1 and 5000'."
+
+- **Finding:** the file used a container format the reader didn't recognise, and that format has no country field.
+- **My decision:** set the country to NL only when the postcode is clearly Dutch, and reject anything else rather than guess.
+
+**3. The AI feature not working**
+> "Why is my AI thing not working? I gave you the API key."
+
+- **Finding:** the key was fine, but the free quota (20 requests) was used up because the risk panel called the AI on every page load.
+- **My decision:** reuse answers when nothing has changed, pause after a quota error, and show the user a clear message when AI is unavailable.
+
+**4. Making the UI usable for non-technical operators**
+> A longer brief asking for a compact layout, business language, names instead of emails, and honest loading states.
+
+- **My decision:** I reviewed every screen, rejected designs that looked generic, and kept refining until text and buttons were readable in both themes.
+
+### Where I overruled AI suggestions
+
+- **Retries.** An early suggestion retried bad data blindly, which would always fail the same way. I redesigned it so each failure is marked as fixed, needing a human, or given up on.
+- **Rule builder.** I rejected a "generic rule builder" that would have pretended to support conditions the system doesn't have. The conflict checker only covers the real rule model.
+- **Bugs caught by hand.** Clicking through the app found two bugs the tests missed: requests sent with the wrong method, and a sign-in library shared between test runs. I fixed both at the source.
+
+### Understanding the code
+
+I can walk through any part of the system live:
+
+- how a parcel moves through the rules
+- how a policy becomes active
+- how incidents are detected
+- how the AI is limited to read-only lookups
+
+### Limitations of AI here
+
+- AI can't decide business matters such as who may approve high-value parcels, how long data must be kept, or how much risk is acceptable. Those need people.
+- AI suggestions can look right and still be wrong. Nothing was kept without being run, tested and checked in the browser.
+- Inside the app, the AI can never:
+  - approve a parcel
+  - change a rule
+  - change a user's role
+  - edit the audit log
+
+  It can only read data and explain it. If it fails, the app falls back to its built-in answers.
+- The free AI tier is very limited, so the app must work well without it, and it does.
+
+---
+
+## Known limitations
+
+- **No database.** All data is lost when the server restarts. Adding MongoDB would only mean replacing the storage classes.
+- **Single server.** Sessions and rate limits live in one server's memory. Running several servers needs a shared store such as Redis.
+- **Short memory for risk detection.** Risk and incident detection only use data since the last restart.
+- **Simple capacity forecast.** The Digital Twin uses a straight-line estimate, not a detailed model.
+- **Browser tests are manual.** The next step would be automated browser tests (Playwright) in CI.
