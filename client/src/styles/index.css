@@ -251,7 +251,9 @@
 .light .text-on-surface-variant { color: rgb(84 74 56); }
 .light .nav-item[aria-current="page"],
 .light .nav-item[aria-current="page"] .text-white { color: rgb(255 255 255); }
-.light .tile-name { font-stretch: 100%; }
+/* Outcome tile names in block capitals: the key word large, the rest of the name small underneath. */
+.light .tile-name { font-stretch: 100%; text-transform: uppercase; font-weight: 800; letter-spacing: 0.01em; }
+.light .tile-sub { text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em; }
 
 /* Surfaces pinned to literal colours in light mode, same reason as the text above: browser dark-mode tools
    rewrite colour variables, which turned cards dark while literal-white panels stayed white. */

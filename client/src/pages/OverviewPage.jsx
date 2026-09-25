@@ -45,7 +45,10 @@ function SortLabel({ name, count, note, band, to }) {
     <>
       {band && <div className={`h-2 ${band}`} aria-hidden="true" />}
       <div className="p-3 sm:p-4 flex flex-col gap-2 h-full">
-        <span className="tile-name font-display text-[16px] leading-tight text-on-surface">{name}</span>
+        <span className="flex flex-col" aria-label={name}>
+          <span className="tile-name font-display text-[20px] sm:text-[24px] leading-none text-on-surface" aria-hidden="true">{name.split(' ')[0]}</span>
+          {name.includes(' ') && <span className="tile-sub mt-1 text-[12px] leading-none text-on-surface" aria-hidden="true">{name.slice(name.indexOf(' ') + 1)}</span>}
+        </span>
         <span className="mt-auto flex items-baseline gap-1.5 flex-wrap">
           <span className="font-display text-[30px] leading-none tabular-nums text-on-surface">{count}</span>
           <span className="text-[12px] text-on-surface-variant">{note}</span>
