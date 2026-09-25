@@ -47,16 +47,16 @@ export default function ReplayPage() {
           <Field label="Batch">
             <Select value={batchId} onChange={(e) => setBatchId(e.target.value)}>
               <option value="">Select a batch</option>
-              {batches.map((b) => <option key={b.batchId} value={b.batchId}>{b.batchId.slice(0, 8)} &middot; {b.results.length} parcels &middot; policy {b.policyVersion}</option>)}
+              {batches.map((b) => <option key={b.batchId} value={b.batchId}>{b.batchId.slice(0, 8)}: {b.results.length} parcels, policy {b.policyVersion}</option>)}
             </Select>
           </Field>
           <Field label="Replay against policy">
             <Select value={policyVersion} onChange={(e) => setPolicyVersion(e.target.value)}>
-              {policies.map((p) => <option key={p.version} value={p.version}>{p.version} &middot; {p.state}</option>)}
+              {policies.map((p) => <option key={p.version} value={p.version}>{p.version} ({p.state.toLowerCase()})</option>)}
             </Select>
           </Field>
         </div>
-        <Button variant="primary" onClick={runReplay} disabled={!batchId || busy}>Replay &rarr;</Button>
+        <Button variant="primary" onClick={runReplay} disabled={!batchId || busy}>Replay</Button>
       </Panel>
 
       {result && (

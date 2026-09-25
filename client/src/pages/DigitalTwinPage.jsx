@@ -35,7 +35,7 @@ export default function DigitalTwinPage() {
           <Field label="Reviewer capacity multiplier (0.5 = half capacity)"><Input type="number" step="0.1" min="0.1" value={scenario.reviewerCapacityMultiplier} onChange={(e) => setScenario({ ...scenario, reviewerCapacityMultiplier: e.target.value })} /></Field>
           <Field label="Failure rate delta (0.05 = +5 points)"><Input type="number" step="0.01" value={scenario.failureRateDelta} onChange={(e) => setScenario({ ...scenario, failureRateDelta: e.target.value })} /></Field>
         </div>
-        <Button variant="primary" onClick={run} disabled={busy}>Run Projection &rarr;</Button>
+        <Button variant="primary" onClick={run} disabled={busy}>Run Projection</Button>
       </Panel>
 
       {result && (

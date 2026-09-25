@@ -18,10 +18,10 @@ const KPI_TONES = {
 };
 
 // Painted floor bay: big signage count, bay number, and a colour mark along the top edge.
-function KpiCard({ bay, icon, tone, label, value, note, hero = false }) {
+function KpiCard({ bay, icon, tone, label, value, note }) {
   const t = KPI_TONES[tone] || KPI_TONES.primary;
   return (
-    <div className={`card ${hero ? 'kpi-hero ' : ''}relative rounded-card bg-surface-container-low border border-white/[0.08] p-3.5 pt-4 flex flex-col justify-between overflow-hidden`}>
+    <div className={`card relative rounded-card bg-surface-container-low border border-white/[0.08] p-3.5 pt-4 flex flex-col justify-between overflow-hidden`}>
       <span className={`kpi-mark absolute inset-x-0 top-0 h-[3px] ${t.mark}`} aria-hidden="true" />
       <div className="flex items-start justify-between gap-3">
         <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-on-surface-variant">{label}</span>
@@ -32,6 +32,53 @@ function KpiCard({ bay, icon, tone, label, value, note, hero = false }) {
         <Icon name={icon} className="text-[16px] text-on-surface-variant/50" />
       </div>
       {note && <div className="mt-1.5 text-[11px] text-on-surface-variant">{note}</div>}
+    </div>
+  );
+}
+
+// Short codes as printed on depot labels; unknown department names fall back to their first word.
+const SORT_CODES = { mail: 'MAIL', regular: 'REG', heavy: 'HVY' };
+const DEFAULT_DEPARTMENTS = ['Mail Department', 'Regular Department', 'Heavy Department'];
+
+function sortCodeFor(department) {
+  const word = department.split(/\s+/)[0].toLowerCase();
+  return SORT_CODES[word] || word.slice(0, 4).toUpperCase();
+}
+
+function SortLabel({ code, name, count, note, band, to }) {
+  const body = (
+    <>
+      {band && <div className={`h-2 ${band}`} aria-hidden="true" />}
+      <div className="p-3 sm:p-4 flex flex-col gap-3 h-full">
+        <span className="text-[12px] text-on-surface-variant">{name}</span>
+        <span className="sort-code text-[40px] sm:text-[48px] text-on-surface" aria-hidden="true">{code}</span>
+        <span className="mt-auto flex items-baseline gap-1.5">
+          <span className="font-display text-[26px] leading-none tabular-nums">{count}</span>
+          <span className="text-[12px] text-on-surface-variant">{note}</span>
+        </span>
+      </div>
+    </>
+  );
+  const className = 'card rounded-card bg-surface-container-low overflow-hidden flex flex-col';
+  return to
+    ? <Link to={to} className={`${className} hover:outline hover:outline-2 hover:outline-black`} aria-label={`${count} ${note}, open approvals`}>{body}</Link>
+    : <div className={className}>{body}</div>;
+}
+
+// Light theme only: one label per outcome, the way a sort wall looks on the depot floor.
+function SortWall({ snapshot }) {
+  // Held parcels are counted under an insurance "department" too; they get their own INS label below instead.
+  const counted = Object.keys(snapshot.departmentDistribution).filter((name) => !/insurance/i.test(name));
+  const order = Object.keys(SORT_CODES);
+  const rank = (name) => { const i = order.indexOf(name.split(/\s+/)[0].toLowerCase()); return i === -1 ? order.length : i; };
+  const departments = (counted.length ? counted : DEFAULT_DEPARTMENTS).sort((a, b) => rank(a) - rank(b));
+  return (
+    <div className="light-only sort-wall grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {departments.map((name) => (
+        <SortLabel key={name} code={sortCodeFor(name)} name={name} count={snapshot.departmentDistribution[name] || 0} note="routed" band="bg-black" />
+      ))}
+      <SortLabel code="INS" name="Insurance check" count={snapshot.pendingApproval} note="waiting for a reviewer" band="bg-[rgb(var(--c-tape))]" to="/approvals" />
+      <SortLabel code="ERR" name="Couldn't be routed" count={snapshot.validationErrors} note="need fixing" band="bg-error" />
     </div>
   );
 }
@@ -63,12 +110,16 @@ export default function OverviewPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         eyebrow="Parcel Routing Control Room"
-        title="Dispatch Overview"
-        description={<>{ownView ? 'Showing parcels you submitted' : 'Showing activity from all operators'} &mdash; current routing rules (<span className="text-on-surface font-semibold">{snapshot.activePolicy}</span>) are active.</>}
+        title="Dispatch overview"
+        description={ownView
+          ? (snapshot.totalParcels ? <>You've submitted {snapshot.totalParcels} parcels. Routing rules {snapshot.activePolicy} are active.</> : <>You haven't submitted any parcels yet. Route one or upload a batch from Intake to start.</>)
+          : <>{snapshot.totalParcels} parcels processed by all operators. Routing rules {snapshot.activePolicy} are active.</>}
         actions={<Badge tone={HEALTH_TONE[health] || 'MEDIUM'}>{health}</Badge>}
       />
 
-      <div className="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <SortWall snapshot={snapshot} />
+
+      <div className="dark-only kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiCard hero bay="01" icon="package_2" tone="primary" label="Parcels Processed" value={snapshot.totalParcels} note={ownView ? (snapshot.totalParcels ? 'Submitted by you' : 'Route a parcel or upload a batch to start') : 'All operators'} />
         <KpiCard bay="02" icon="verified" tone="tertiary" label="Routed" value={snapshot.successful} note="Successfully dispatched" />
         <KpiCard bay="03" icon="pending_actions" tone="secondary" label="Awaiting Approval" value={snapshot.pendingApproval} note="In the approval queue" />
@@ -76,18 +127,18 @@ export default function OverviewPage() {
       </div>
 
       {attentionRequired.length > 0 && (
-        <section className="card rounded-card border border-error/40 bg-error-container/40 overflow-hidden" aria-labelledby="attention-heading">
+        <section className="attn card rounded-card border border-error/40 bg-error-container/40 overflow-hidden" aria-labelledby="attention-heading">
           <div className="h-2 hazard-stripe-error" aria-hidden="true" />
           <div className="p-4 flex flex-col gap-3">
             <div className="flex items-center gap-2.5 flex-wrap">
               <Icon name="warning" className="text-[16px] text-error" />
-              <h2 id="attention-heading" className="font-display font-black uppercase text-[16px] tracking-[0.02em] text-white">Needs Immediate Attention</h2>
+              <h2 id="attention-heading" className="font-display font-black uppercase text-[16px] tracking-[0.02em] text-white">Needs attention now</h2>
               <Badge tone="error">{attentionRequired.length} item{attentionRequired.length === 1 ? '' : 's'}</Badge>
             </div>
             <ol className="flex flex-col divide-y divide-error/20">
               {attentionRequired.map((item, i) => (
                 <li key={i} className="flex items-start gap-3 py-2 first:pt-0 last:pb-0">
-                  <span className="font-stencil font-extrabold text-[16px] leading-none text-error w-5 shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="attn-num font-stencil font-extrabold text-[16px] leading-none text-error w-5 shrink-0">{String(i + 1).padStart(2, '0')}</span>
                   <p className="text-[13px] text-on-surface leading-snug">{item}</p>
                 </li>
               ))}
@@ -98,7 +149,7 @@ export default function OverviewPage() {
 
       <Panel
         icon="monitoring"
-        title="Operational Intelligence"
+        title="Trends to watch"
         actions={<Badge tone={risk.level}>{risk.level.replaceAll('_', ' ')}</Badge>}
       >
         <p className="font-semibold text-[14px] text-white mb-1">{risk.title}</p>
@@ -120,9 +171,9 @@ export default function OverviewPage() {
       </Panel>
 
       <div className="flex flex-wrap gap-3">
-        <Link to="/intake"><Button variant="primary"><Icon name="upload" className="text-[16px]" />Route a Parcel or Batch</Button></Link>
-        <Link to="/incidents"><Button variant="ghost"><Icon name="emergency_home" className="text-[16px]" />View Incident Center</Button></Link>
-        <Link to="/assistant"><Button variant="outline"><Icon name="terminal" className="text-[16px]" />Ask the Ops Assistant</Button></Link>
+        <Link to="/intake"><Button variant="primary"><Icon name="upload" className="text-[16px]" />Route parcels</Button></Link>
+        <Link to="/incidents"><Button variant="ghost"><Icon name="emergency_home" className="text-[16px]" />Open incidents</Button></Link>
+        <Link to="/assistant"><Button variant="outline"><Icon name="terminal" className="text-[16px]" />Ask the assistant</Button></Link>
       </div>
     </div>
   );

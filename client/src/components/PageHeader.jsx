@@ -3,7 +3,7 @@ export default function PageHeader({ eyebrow, title, description, actions }) {
     <div className="flex flex-wrap items-end justify-between gap-3 border-b border-white/[0.08] pb-3">
       <div className="flex flex-col items-start">
         {eyebrow && (
-          <span className="eyebrow inline-block bg-primary text-on-primary font-mono text-[9px] font-semibold uppercase tracking-[0.14em] px-1.5 py-0.5 mb-1.5 rounded-sm">
+          <span data-step={/^step\b/i.test(eyebrow) ? '' : undefined} className="eyebrow inline-block bg-primary text-on-primary font-mono text-[9px] font-semibold uppercase tracking-[0.14em] px-1.5 py-0.5 mb-1.5 rounded-sm">
             {eyebrow}
           </span>
         )}

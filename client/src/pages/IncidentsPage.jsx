@@ -45,10 +45,10 @@ export default function IncidentsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
         {incidents.map((incident) => (
           <Panel key={incident.incidentId} meta={incident.incidentId} title={incident.status} actions={<Badge tone={incident.severity}>{incident.severity}</Badge>}>
-            <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-xs">Failure rate {(incident.failureRateBefore * 100).toFixed(1)}% &rarr; {(incident.failureRateAfter * 100).toFixed(1)}% &middot; {incident.evidenceCount} related failures</p>
+            <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-xs">Failure rate {(incident.failureRateBefore * 100).toFixed(1)}% &rarr; {(incident.failureRateAfter * 100).toFixed(1)}%, {incident.evidenceCount} related failures</p>
             <p className="font-body-compact text-body-compact text-on-surface mb-space-sm">{incident.likelyCause}</p>
-            <ul className="flex flex-col gap-space-3xs mb-space-sm">
-              {incident.recommendedActions.map((a, i) => <li key={i} className="font-body-compact text-body-compact text-on-surface-variant">&middot; {a}</li>)}
+            <ul className="flex flex-col gap-space-3xs mb-space-sm list-disc pl-4">
+              {incident.recommendedActions.map((a, i) => <li key={i} className="font-body-compact text-body-compact text-on-surface-variant">{a}</li>)}
             </ul>
             {identity.role === 'ADMIN' && incident.status !== 'RESOLVED' && (
               <Button variant="outline" size="sm" onClick={() => advance(incident)}>Move to {NEXT_STATUS[incident.status]}</Button>

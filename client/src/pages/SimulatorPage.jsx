@@ -46,9 +46,9 @@ export default function SimulatorPage() {
         <div className="flex flex-wrap items-center gap-space-sm">
           <Select value={candidate} onChange={(e) => setCandidate(e.target.value)} className="max-w-xs">
             <option value="">Select a policy version</option>
-            {policies.map((p) => <option key={p.version} value={p.version}>{p.version} &middot; {p.state}</option>)}
+            {policies.map((p) => <option key={p.version} value={p.version}>{p.version} ({p.state.toLowerCase()})</option>)}
           </Select>
-          <Button variant="primary" onClick={runSimulation} disabled={!candidate || busy}>Run Simulation &rarr;</Button>
+          <Button variant="primary" onClick={runSimulation} disabled={!candidate || busy}>Run Simulation</Button>
         </div>
       </Panel>
 

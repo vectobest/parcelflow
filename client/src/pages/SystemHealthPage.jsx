@@ -30,7 +30,7 @@ export default function SystemHealthPage() {
       {health && (
         <Panel icon="monitor_heart" title="Live Health" actions={<Badge tone="LOW">{health.status}</Badge>}>
           <p className="font-body-compact text-body-compact text-on-surface-variant">
-            Up <span className="text-on-surface font-semibold">{health.uptimeSeconds}s</span> &middot; active policy <span className="text-on-surface font-semibold">{health.activePolicy}</span> &middot; OAuth <span className="text-on-surface font-semibold">{health.oauthEnabled ? 'enabled' : 'not configured'}</span>
+            Up <span className="text-on-surface font-semibold">{health.uptimeSeconds}s</span>, active policy <span className="text-on-surface font-semibold">{health.activePolicy}</span>, OAuth <span className="text-on-surface font-semibold">{health.oauthEnabled ? 'enabled' : 'not configured'}</span>
           </p>
         </Panel>
       )}
@@ -47,7 +47,7 @@ export default function SystemHealthPage() {
         </ul>
         {state && (
           <div className="mt-space-sm bg-surface-container px-space-sm py-space-xs font-body-compact text-body-compact text-on-surface">
-            <strong className="text-primary">State at {new Date(at).toLocaleString()}:</strong> policy {state.activePolicy || '—'} &middot; {state.parcelsProcessed} parcels processed &middot; {(state.failureRate * 100).toFixed(1)}% failure rate &middot; {state.approvalQueueSize} in approval queue &middot; {state.openIncidents.length} open incident(s)
+            <strong className="text-primary">State at {new Date(at).toLocaleString()}:</strong> policy {state.activePolicy || '—'}, {state.parcelsProcessed} parcels processed, {(state.failureRate * 100).toFixed(1)}% failure rate, {state.approvalQueueSize} in approval queue, {state.openIncidents.length} open incident(s)
           </div>
         )}
       </Panel>

@@ -53,7 +53,7 @@ export default function SecurityCenterPage() {
         actions={securityReport && <Badge tone={securityReport.status === 'PROTECTED' ? 'LOW' : 'HIGH'}>{securityReport.status}</Badge>}
       >
         <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-sm">Runs 8 real attack scenarios (oversized upload, XXE, prototype pollution, unauthorized actions, invalid auth, replay) against the actual security code and reports whether each was genuinely blocked.</p>
-        <Button variant="primary" onClick={runSecurityDrill} disabled={busy}>Run Security Drill &rarr;</Button>
+        <Button variant="primary" onClick={runSecurityDrill} disabled={busy}>Run Security Drill</Button>
         {securityReport && (
           <ul className="mt-space-sm flex flex-col gap-space-xs">
             {securityReport.results.map((r) => (

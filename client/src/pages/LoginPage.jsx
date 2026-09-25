@@ -39,7 +39,7 @@ export default function LoginPage() {
         <div className="bg-surface-container-low border border-t-0 border-white/[0.08] shadow-2xl rounded-b-card">
           <div className="px-6 pt-6 pb-5 border-b border-white/[0.06] flex items-start justify-between gap-4">
             <div>
-              <span className="font-mono text-[10px] text-primary tracking-[0.16em] uppercase">Control Room · Dock 02</span>
+              <span className="font-mono text-[10px] text-primary tracking-[0.16em] uppercase">Control room, dock 02</span>
               <h1 className="font-display font-black uppercase text-[48px] leading-[0.9] tracking-[0.02em] text-white mt-2">ParcelFlow</h1>
               <p className="text-[14px] text-on-surface-variant mt-3">Sign in to route parcels, review policy and investigate incidents.</p>
             </div>

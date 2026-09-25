@@ -41,95 +41,105 @@
   --f-stencil: 'Big Shoulders Stencil Display', 'Big Shoulders Display', sans-serif;
 }
 
-/* Light theme: "ink and highlighter" -- white rounded cards on a dotted light-grey canvas, near-black ink as the
-   dominant colour, one sharp highlighter yellow for emphasis, and blue / green / orange carrying status. */
+/* Light theme: "thermal label". The depot's most familiar object is the shipping label -- pure black print on
+   white stock, stuck to kraft cartons, with a sort code big enough to read from across the floor. Cards are labels
+   on a kraft floor; state is carried by tape yellow, hold red and cleared green, never by decoration. */
 .light {
-  --c-surface: 243 243 241;
+  --c-surface: 217 196 160;              /* kraft #D9C4A0 */
   --c-surface-container-lowest: 255 255 255;
-  --c-surface-container-low: 255 255 255;
-  --c-surface-container: 244 244 242;
-  --c-surface-container-high: 236 236 233;
-  --c-surface-container-highest: 224 224 220;
-  --c-on-surface: 23 23 23;
-  --c-on-surface-variant: 112 112 108;
-  --c-outline-variant: 229 229 225;
-  --c-primary: 22 22 22;
-  --c-primary-fixed-dim: 64 64 64;
+  --c-surface-container-low: 255 255 255;  /* label stock */
+  --c-surface-container: 244 242 236;
+  --c-surface-container-high: 232 228 219;
+  --c-surface-container-highest: 212 206 194;
+  --c-on-surface: 0 0 0;                 /* thermal print */
+  --c-on-surface-variant: 84 74 56;
+  --c-outline-variant: 196 176 140;
+  --c-primary: 0 0 0;
+  --c-primary-fixed-dim: 46 46 46;
   --c-on-primary: 255 255 255;
-  --c-secondary: 30 128 204;
-  --c-secondary-container: 222 239 250;
-  --c-tertiary: 38 150 82;
-  --c-error: 206 64 38;
-  --c-error-container: 253 234 228;
+  --c-secondary: 28 78 170;
+  --c-secondary-container: 226 234 248;
+  --c-tertiary: 23 128 74;               /* cleared #17804A */
+  --c-error: 215 38 30;                  /* hold red #D7261E */
+  --c-error-container: 252 228 224;
   --c-on-error: 255 255 255;
-  --c-caution: 214 118 28;
-  /* Named `white`/`text-white` throughout for historical reasons (it was literal white before this token existed);
-     it's really "strongest-emphasis ink" and is near-black here so headings stay high-contrast in light mode. */
-  --c-white: 17 17 17;
-  --c-accent: 255 210 48;
+  --c-caution: 150 104 0;                /* tape, darkened for text; the fill itself is --c-tape */
+  --c-tape: 242 183 5;                   /* #F2B705 */
+  --c-white: 0 0 0;
+  --c-edge: 120 92 46;                   /* the shadowed edge of a label stuck on a carton */
 
-  --r-default: 8px;
-  --r-sm: 10px;
-  --r-lg: 12px;
-  --r-xl: 12px;
-  --r-2xl: 16px;
-  --r-3xl: 20px;
-  --r-card: 20px;
-  --r-badge: 999px;
+  --r-default: 4px;
+  --r-sm: 4px;
+  --r-lg: 6px;
+  --r-xl: 6px;
+  --r-2xl: 8px;
+  --r-3xl: 8px;
+  --r-card: 6px;                         /* die-cut label corner */
+  --r-badge: 2px;                        /* status stickers are square-cut */
 
-  --f-sans: 'Schibsted Grotesk', system-ui, sans-serif;
-  --f-display: 'Bricolage Grotesque', 'Schibsted Grotesk', system-ui, sans-serif;
-  --f-stencil: 'Bricolage Grotesque', 'Schibsted Grotesk', system-ui, sans-serif;
+  --f-sans: 'Archivo', system-ui, sans-serif;
+  --f-display: 'Archivo', system-ui, sans-serif;
+  --f-stencil: 'Archivo', system-ui, sans-serif;
 }
 
-/* Light theme drops the signage voice: sentence case, normal tracking, medium weights. Two-class selectors so they
-   win over single Tailwind utilities (uppercase, font-black, text-[10px]) without !important. */
+/* One family, Archivo; its width axis does the work. Display type runs extra-wide and heavy like a sort code,
+   body stays at normal width. Two-class selectors so they beat single Tailwind utilities without !important. */
 .light .font-display,
-.light .font-stencil { text-transform: none; letter-spacing: -0.03em; font-weight: 700; font-optical-sizing: auto; }
+.light .font-stencil { text-transform: none; letter-spacing: -0.005em; font-weight: 800; font-stretch: 125%; }
 .light .font-mono.uppercase { text-transform: none; letter-spacing: 0; font-family: var(--f-sans); font-size: 12px; font-weight: 500; }
 .light .btn { text-transform: none; letter-spacing: 0; font-weight: 600; }
-.light table { font-family: var(--f-sans); font-size: 13px; }
-.light thead { text-transform: none; letter-spacing: 0; font-size: 12px; }
-.light .card { box-shadow: 0 1px 2px rgb(17 17 17 / 0.04), 0 8px 24px -8px rgb(17 17 17 / 0.08); }
-.light .kpi-mark,
-.light .bay-label { display: none; }
+.light table { font-family: var(--f-sans); font-size: 13px; font-variant-numeric: tabular-nums; }
+.light thead { text-transform: none; letter-spacing: 0; font-size: 12px; border-bottom: 2px solid rgb(0 0 0); }
 .light input,
 .light select,
 .light textarea { font-family: var(--f-sans); }
-.light ::selection { background: rgb(var(--c-accent)); color: rgb(17 17 17); }
+.light ::selection { background: rgb(var(--c-tape)); color: rgb(0 0 0); }
+.light :focus-visible { outline: 2px solid rgb(0 0 0); outline-offset: 2px; }
 
-/* The page tag is drawn on with a highlighter as each page loads. */
-@keyframes highlight-sweep {
-  from { background-size: 0% 72%; }
-  to { background-size: 100% 72%; }
-}
-.light .eyebrow {
-  background: linear-gradient(rgb(var(--c-accent)), rgb(var(--c-accent))) no-repeat left 60% / 100% 72%;
-  color: rgb(var(--c-on-surface));
-  padding: 0 5px;
-  margin-left: -5px;
-  animation: highlight-sweep 650ms 160ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-.light .eyebrow.font-mono.uppercase { font-weight: 600; }
+/* Labels on a carton: flat white stock with a hard lower edge, no soft shadows. */
+.light .card { border-color: transparent; box-shadow: 0 1.5px 0 rgb(var(--c-edge) / 0.45); }
+.light .panel-head { border-bottom: 2px solid rgb(0 0 0); }
+.light .kpi-mark,
+.light .bay-label,
+.light .attn-num { display: none; }
 
-/* Active navigation reads as an ink chip with a highlighter icon, echoing the black chips of the reference. */
-.light .nav-item[aria-current="page"] { background: rgb(var(--c-primary)); color: rgb(var(--c-on-primary)); }
+/* Section tags above page titles only survive where they carry information: the intake -> approval steps. */
+.light .eyebrow:not([data-step]) { display: none; }
+.light .eyebrow { background: rgb(0 0 0); color: rgb(255 255 255); border-radius: 2px; }
+
+/* Chrome sits on the kraft; the current page is the one white label on it. */
+.light .sidebar,
+.light .app-header { background: rgb(var(--c-surface)); backdrop-filter: none; border-color: rgb(var(--c-edge) / 0.35); }
+.light .nav-item[aria-current="page"] { background: rgb(255 255 255); color: rgb(0 0 0); box-shadow: 0 1.5px 0 rgb(var(--c-edge) / 0.45); }
 .light .nav-item[aria-current="page"]::before { display: none; }
-.light .nav-item[aria-current="page"] .material-symbols-outlined { color: rgb(var(--c-accent)); }
+.light .nav-item[aria-current="page"] .material-symbols-outlined { color: rgb(0 0 0); }
 
-/* The headline KPI is the one inverted card: ink background, highlighter number. */
-.light .kpi-hero { background: rgb(17 17 17); border-color: transparent; }
-.light .kpi-hero .font-display { color: rgb(var(--c-accent)); }
-.light .kpi-hero [class*="text-on-surface-variant"] { color: rgb(255 255 255 / 0.62); }
-.light .kpi-hero::after {
-  content: '';
-  position: absolute;
-  inset: auto -30% -70% auto;
-  width: 70%;
-  aspect-ratio: 1;
-  background: radial-gradient(circle, rgb(var(--c-accent) / 0.22), transparent 65%);
-  pointer-events: none;
+/* Status stickers: tape for waiting, red for held or failed, print-on-white for cleared. */
+.light [data-tone="caution"] { background: rgb(var(--c-tape)); color: rgb(0 0 0); border-color: rgb(var(--c-tape)); }
+.light [data-tone="danger"] { background: rgb(var(--c-error)); color: rgb(255 255 255); border-color: rgb(var(--c-error)); }
+.light [data-tone="clear"] { background: rgb(255 255 255); color: rgb(var(--c-tertiary)); border-color: rgb(var(--c-tertiary)); }
+.light [data-tone="neutral"] { background: rgb(255 255 255); color: rgb(0 0 0); border-color: rgb(0 0 0 / 0.25); }
+
+/* Markup that exists for one theme only. */
+.light .dark-only { display: none; }
+:root:not(.light) .light-only { display: none; }
+
+/* The sort wall: one label per outcome, sort code printed huge. */
+.sort-code { font-family: var(--f-display); font-stretch: 125%; font-weight: 900; line-height: 0.85; letter-spacing: -0.02em; }
+.barcode { font-family: 'Libre Barcode 39', monospace; font-weight: 400; line-height: 1; letter-spacing: 0; white-space: nowrap; overflow: hidden; }
+
+/* The one motion moment: labels print onto the wall, line by line, left to right. */
+@keyframes thermal-print {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
 }
+.light .sort-wall > * { animation: thermal-print 560ms steps(14, end) both; }
+.light .sort-wall > *:nth-child(2) { animation-delay: 110ms; }
+.light .sort-wall > *:nth-child(3) { animation-delay: 220ms; }
+.light .sort-wall > *:nth-child(4) { animation-delay: 330ms; }
+.light .sort-wall > *:nth-child(5) { animation-delay: 440ms; }
+/* ...so the generic fade-up on every section is switched off in this theme. */
+.light .page-reveal > * > * { animation: none; }
 
 @layer base {
   html, body { margin: 0; padding: 0; }
@@ -159,21 +169,10 @@
   background: repeating-linear-gradient(-45deg, rgb(var(--c-error)) 0 8px, rgb(var(--c-surface-container-lowest)) 8px 16px);
 }
 
-/* Light: a dotted canvas lit by a warm highlighter glow top-right and a cool wash bottom-left,
-   and hatching softened to the fine stripes of a progress bar. */
-.light .depot-floor {
-  background:
-    radial-gradient(ellipse 50% 38% at 92% -8%, rgb(var(--c-accent) / 0.30), transparent 70%),
-    radial-gradient(ellipse 42% 34% at -6% 108%, rgb(var(--c-secondary) / 0.10), transparent 70%),
-    radial-gradient(rgb(var(--c-on-surface) / 0.09) 1px, transparent 1.2px) 0 0 / 14px 14px;
-  mask-image: none;
-}
-.light .hazard-stripe {
-  background: repeating-linear-gradient(-45deg, rgb(var(--c-on-surface) / 0.14) 0 3px, transparent 3px 7px);
-}
-.light .hazard-stripe-error {
-  background: repeating-linear-gradient(-45deg, rgb(var(--c-error) / 0.6) 0 4px, rgb(var(--c-error-container)) 4px 9px);
-}
+/* Light: plain kraft, and the tape/stripe devices become a label's solid printed bars. */
+.light .depot-floor { background: none; mask-image: none; }
+.light .hazard-stripe { background: rgb(0 0 0); }
+.light .hazard-stripe-error { background: rgb(var(--c-error)); }
 
 /* One orchestrated reveal per page: each top-level section rises in turn as it mounts. */
 @keyframes rise {
@@ -201,7 +200,7 @@
 @media (prefers-reduced-motion: reduce) {
   .page-reveal > * > *, .kpi-grid > * { animation: none; }
   .indeterminate-bar { animation: none; width: 100%; }
-  .light .eyebrow { animation: none; }
+  .light .sort-wall > * { animation: none; }
 }
 
 /* Google's required base rule for the Material Symbols ligature font to render as icons instead of literal text. */
@@ -220,3 +219,9 @@
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
 }
+
+/* Status stickers read as stamps: wide, bold, small -- the one place caps belong, because the values are codes. */
+.light [data-tone].font-mono.uppercase { font-stretch: 125%; font-weight: 700; font-size: 10px; letter-spacing: 0.02em; }
+.light .attn { background: rgb(255 255 255); }
+/* The compact mobile header can't afford the extra-wide cut. */
+.light .app-header .font-display { font-stretch: 100%; font-size: 16px; }

@@ -96,7 +96,7 @@ export default function IntakePage() {
               <Field label="Declared value (EUR)"><Input type="number" step="0.01" min="0" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} required /></Field>
             </div>
             <Field label="Destination country"><Input type="text" value={form.destinationCountry} onChange={(e) => setForm({ ...form, destinationCountry: e.target.value })} required /></Field>
-            <Button variant="primary" type="submit" disabled={busy} className="w-full py-space-sm mt-space-2xs">Route Parcel &rarr;</Button>
+            <Button variant="primary" type="submit" disabled={busy} className="w-full py-space-sm mt-space-2xs">Route Parcel</Button>
           </form>
         </Panel>
 
@@ -128,7 +128,7 @@ export default function IntakePage() {
         <Panel
           icon="fact_check"
           title={`Batch ${batch.batchId.slice(0, 8)}`}
-          meta={`${batch.results.length} parcels · rules ${batch.policyVersion}`}
+          meta={`${batch.results.length} parcels, rules ${batch.policyVersion}`}
           actions={<Badge tone={batch.state === 'COMPLETED' ? 'LOW' : 'MEDIUM'}>{batch.state}</Badge>}
           bodyClassName=""
         >

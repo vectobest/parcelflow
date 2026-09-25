@@ -100,7 +100,7 @@ export default function PolicyManagerPage() {
               title={policy.version}
               actions={<Badge tone={STATE_TONE[policy.state]}>{policy.state}</Badge>}
             >
-              <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-sm">Mail &le; {policy.mailWeightLimit}kg &middot; Regular &le; {policy.regularWeightLimit}kg &middot; Insurance &gt; &euro;{policy.insuranceValueThreshold}</p>
+              <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-sm">Mail up to {policy.mailWeightLimit}kg, regular up to {policy.regularWeightLimit}kg, insurance check above &euro;{policy.insuranceValueThreshold}</p>
               <div className="flex flex-wrap gap-space-sm">
                 <Button variant="outline" size="sm" onClick={() => inspect(policy.version)}>Check Conflicts &amp; Blast Radius</Button>
                 {isAdmin && next && <Button variant="primary" size="sm" onClick={() => runAction(policy.version, next[0])}>{next[1]}</Button>}

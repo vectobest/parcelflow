@@ -123,7 +123,7 @@ export default function Layout({ children }) {
       )}
 
       <motion.aside
-        className={`fixed left-0 top-0 bottom-8 w-64 bg-surface-container-low z-50 flex flex-col justify-between border-r border-white/[0.08] [&_a]:[-webkit-user-drag:none] ${isDesktop ? '' : "shadow-xl before:content-[''] before:absolute before:inset-y-0 before:right-full before:w-16 before:bg-surface-container-low"}`}
+        className={`sidebar fixed left-0 top-0 bottom-8 w-64 bg-surface-container-low z-50 flex flex-col justify-between border-r border-white/[0.08] [&_a]:[-webkit-user-drag:none] ${isDesktop ? '' : "shadow-xl before:content-[''] before:absolute before:inset-y-0 before:right-full before:w-16 before:bg-surface-container-low"}`}
         style={{ x: drawerX, touchAction: 'pan-y' }}
         drag={isDesktop ? false : 'x'}
         dragConstraints={{ left: -DRAWER_WIDTH, right: 0 }}
@@ -149,7 +149,7 @@ export default function Layout({ children }) {
               </div>
               <div className="flex flex-col min-w-0 leading-none">
                 <span className="font-display font-black text-[17px] tracking-[0.02em] text-white truncate uppercase">ParcelFlow</span>
-                <span className="font-mono text-[9px] text-on-surface-variant tracking-[0.1em] uppercase truncate mt-1">Control Room · Dock 02</span>
+                <span className="font-mono text-[9px] text-on-surface-variant tracking-[0.1em] uppercase truncate mt-1">Control room, dock 02</span>
               </div>
             </div>
             <div className="h-1.5 hazard-stripe" />
@@ -194,13 +194,13 @@ export default function Layout({ children }) {
           </div>
           <span className="min-w-0 flex-1">
             <span className="block text-[14px] font-semibold text-on-surface truncate">{identity.name || identity.actor}</span>
-            <span className="block font-mono text-[10px] tracking-[0.1em] text-on-surface-variant uppercase truncate">{identity.role} · sign out</span>
+            <span className="block font-mono text-[10px] tracking-[0.1em] text-on-surface-variant uppercase truncate">Sign out</span>
           </span>
         </button>
       </motion.aside>
 
       <div className="lg:pl-64 relative z-10">
-        <header className="fixed top-0 left-0 lg:left-64 right-0 h-14 bg-surface-container-low/80 backdrop-blur-xl border-b border-white/[0.08] z-40 flex items-center justify-between px-6 gap-3 shadow-sm">
+        <header className="app-header fixed top-0 left-0 lg:left-64 right-0 h-14 bg-surface-container-low/80 backdrop-blur-xl border-b border-white/[0.08] z-40 flex items-center justify-between px-6 gap-3 shadow-sm">
           <div className="flex items-center gap-4 flex-1 min-w-0 max-w-xl">
             <button className="lg:hidden p-2 rounded-xl border border-white/[0.08] text-on-surface-variant active:bg-surface-container-high" type="button" aria-label="Open navigation" aria-expanded={menuOpen} onClick={() => settleDrawer(true)}>
               <Icon name="menu" className="text-[18px]" />
@@ -218,7 +218,7 @@ export default function Layout({ children }) {
             </div>
           </div>
           <div className="flex flex-col min-w-0 flex-1 items-center text-center sm:hidden">
-            <span className="font-display font-extrabold uppercase tracking-[0.04em] text-[18px] text-on-surface truncate">{current?.label || 'ParcelFlow'}</span>
+            <span className="font-display font-extrabold uppercase tracking-[0.04em] text-[18px] text-on-surface truncate max-w-full">{current?.label || 'ParcelFlow'}</span>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <button
