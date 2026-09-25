@@ -1,3 +1,4 @@
+import { aiFallbackNote } from '../intelligence/AiRiskNarrator.js';
 import { FunctionCallingConfigMode } from '@google/genai';
 
 const TOOLS = [
@@ -114,8 +115,8 @@ export class AiOperationsAssistantService {
       const answer = response?.text?.trim();
       if (!answer) return this.#fallback.ask(question);
       return { question, answer, citedIds: [...citedIds], unresolved: false, source: 'gemini' };
-    } catch {
-      return this.#fallback.ask(question);
+    } catch (error) {
+      return { ...this.#fallback.ask(question), aiNote: aiFallbackNote(error) };
     }
   }
 

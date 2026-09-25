@@ -90,6 +90,8 @@ export function createContainer({ config = new Config(), clock = () => new Date(
   const incidentDetectorService = new IncidentDetectorService({ repository: new InMemoryIncidentRepository(), batchService, failureDnaService: new FailureDnaService({ batchService }), auditService, clock });
   const retryService = new RetryService({ batchRepository, routingEngine, policyService, approvalService, auditService, authorizationService, clock, maxRetries: config.maxRetries });
   const gemini = config.aiEnabled ? new GeminiClient({ apiKey: config.geminiApiKey, model: config.geminiModel }) : null;
+  // Shared across every per-viewer read model so identical risk evidence is only ever narrated once.
+  const narrationCache = new Map();
 
   // Every read-side service, built over whichever batches/approvals/incidents the viewer is allowed to see.
   function buildReadModels({ scope, batches, approvals, incidents }) {
@@ -103,7 +105,7 @@ export function createContainer({ config = new Config(), clock = () => new Date(
     const operationsAssistantService = gemini
       ? new AiOperationsAssistantService({ gemini, policyService, batchService: batches, incidentDetectorService: incidents, riskService, failureDnaService, digitalTwinService, fallback: heuristicAssistant })
       : heuristicAssistant;
-    const riskNarrator = gemini ? new AiRiskNarrator({ gemini, riskService }) : { assess: () => ({ ...riskService.assess(), source: 'heuristic' }) };
+    const riskNarrator = gemini ? new AiRiskNarrator({ gemini, riskService, cache: narrationCache }) : { assess: () => ({ ...riskService.assess(), source: 'heuristic' }) };
     return {
       scope, batches, approvals, incidents,
       comparisonService, riskService, failureDnaService, dashboardService, digitalTwinService,

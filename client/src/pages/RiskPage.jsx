@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { useApiError } from '../hooks/useApiError.js';
 import Badge from '../components/Badge.jsx';
 import Panel from '../components/Panel.jsx';
+import Icon from '../components/Icon.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { tableWrap, table, thead, th, tr, td } from '../components/table.js';
 
@@ -49,6 +50,12 @@ export default function RiskPage() {
             ? 'Detection: transparent heuristic. Wording: Gemini, grounded only in the evidence above.'
             : `Methodology: transparent ${risk.methodology || 'heuristic'} over recent batches and the approval queue — not machine learning.`}
         </p>
+        {risk.aiNote && (
+          <p className="mt-3 flex items-start gap-2 rounded-sm border border-caution/50 bg-caution/10 px-3 py-2 text-[12px] text-on-surface" role="note">
+            <Icon name="info" className="text-[16px] shrink-0" />
+            <span>{risk.aiNote}</span>
+          </p>
+        )}
       </Panel>
 
       <Panel icon="fingerprint" title={`Failure DNA (${dna?.totalFailures ?? 0} failures fingerprinted)`} bodyClassName={dna?.categories.length ? '' : 'p-space-sm'}>

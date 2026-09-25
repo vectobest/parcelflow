@@ -4,6 +4,7 @@ import { useApiError } from '../hooks/useApiError.js';
 import Panel from '../components/Panel.jsx';
 import Button from '../components/Button.jsx';
 import Badge from '../components/Badge.jsx';
+import Icon from '../components/Icon.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { Input } from '../components/Field.jsx';
 
@@ -49,6 +50,12 @@ export default function AssistantPage() {
           <Panel key={i} icon="chat" actions={<Badge tone={entry.source === 'gemini' ? 'LOW' : 'neutral'}>{entry.source === 'gemini' ? 'Gemini' : 'Heuristic'}</Badge>}>
             <p className="font-body-compact text-body-compact text-on-surface mb-space-2xs"><span className="text-on-surface-variant font-bold">Q:</span> {entry.question}</p>
             <p className={`font-body-compact text-body-compact ${entry.unresolved ? 'text-on-surface-variant' : 'text-on-surface'}`}>{entry.answer}</p>
+            {entry.aiNote && (
+              <p className="mt-3 flex items-start gap-2 rounded-sm border border-caution/50 bg-caution/10 px-3 py-2 text-[12px] text-on-surface" role="note">
+                <Icon name="info" className="text-[16px] shrink-0" />
+                <span>{entry.aiNote}</span>
+              </p>
+            )}
             {entry.citedIds.length > 0 && <p className="mt-space-xs font-kpi-micro text-kpi-micro text-on-surface-variant uppercase">Cited: {entry.citedIds.join(', ')}</p>}
           </Panel>
         ))}

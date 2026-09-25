@@ -100,3 +100,27 @@ test('AiRiskNarrator never calls Gemini when there is insufficient data (nothing
   assert.equal(called, false);
   assert.equal(result.source, 'heuristic');
 });
+
+test('AiRiskNarrator reuses a cached narration while the evidence is unchanged, across instances', async () => {
+  const riskService = { assess: () => ({ level: 'MEDIUM', confidence: 68, title: 'x', message: 'original', evidence: ['signal A'], recommendation: 'do X' }) };
+  let calls = 0;
+  const gemini = { generateContent: async () => { calls += 1; return { text: 'Narrated once.' }; } };
+  const cache = new Map();
+  const first = await new AiRiskNarrator({ gemini, riskService, cache }).assess();
+  const second = await new AiRiskNarrator({ gemini, riskService, cache }).assess();
+
+  assert.equal(calls, 1);
+  assert.equal(second.message, 'Narrated once.');
+  assert.equal(first.source, 'gemini');
+  assert.equal(second.source, 'gemini');
+});
+
+test('a Gemini quota error falls back with a note that says the usage limit was reached', async () => {
+  const { GeminiQuotaError } = await import('../../src/ai/GeminiClient.js');
+  const riskService = { assess: () => ({ level: 'HIGH', confidence: 82, title: 'x', message: 'original', evidence: ['signal A'], recommendation: 'do X' }) };
+  const gemini = { generateContent: async () => { throw new GeminiQuotaError(Date.now() + 60_000); } };
+  const result = await new AiRiskNarrator({ gemini, riskService }).assess();
+
+  assert.equal(result.source, 'heuristic');
+  assert.match(result.aiNote, /usage limit/);
+});
