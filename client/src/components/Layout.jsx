@@ -170,7 +170,7 @@ export default function Layout({ children }) {
                     key={item.to}
                     to={item.to}
                     end={item.to === '/'}
-                    className={({ isActive }) => `group relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-sm text-[14px] transition-colors ${
+                    className={({ isActive }) => `nav-item group relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-sm text-[14px] transition-colors ${
                       isActive
                         ? "bg-surface-container-high text-white font-semibold before:content-[''] before:absolute before:left-0 before:inset-y-1 before:w-[3px] before:bg-primary"
                         : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container active:bg-surface-container-high font-medium'

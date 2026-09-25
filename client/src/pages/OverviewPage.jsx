@@ -18,10 +18,10 @@ const KPI_TONES = {
 };
 
 // Painted floor bay: big signage count, bay number, and a colour mark along the top edge.
-function KpiCard({ bay, icon, tone, label, value, note }) {
+function KpiCard({ bay, icon, tone, label, value, note, hero = false }) {
   const t = KPI_TONES[tone] || KPI_TONES.primary;
   return (
-    <div className="card relative rounded-card bg-surface-container-low border border-white/[0.08] p-3.5 pt-4 flex flex-col justify-between overflow-hidden">
+    <div className={`card ${hero ? 'kpi-hero ' : ''}relative rounded-card bg-surface-container-low border border-white/[0.08] p-3.5 pt-4 flex flex-col justify-between overflow-hidden`}>
       <span className={`kpi-mark absolute inset-x-0 top-0 h-[3px] ${t.mark}`} aria-hidden="true" />
       <div className="flex items-start justify-between gap-3">
         <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-on-surface-variant">{label}</span>
@@ -69,7 +69,7 @@ export default function OverviewPage() {
       />
 
       <div className="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard bay="01" icon="package_2" tone="primary" label="Parcels Processed" value={snapshot.totalParcels} note={ownView ? (snapshot.totalParcels ? 'Submitted by you' : 'Route a parcel or upload a batch to start') : 'All operators'} />
+        <KpiCard hero bay="01" icon="package_2" tone="primary" label="Parcels Processed" value={snapshot.totalParcels} note={ownView ? (snapshot.totalParcels ? 'Submitted by you' : 'Route a parcel or upload a batch to start') : 'All operators'} />
         <KpiCard bay="02" icon="verified" tone="tertiary" label="Routed" value={snapshot.successful} note="Successfully dispatched" />
         <KpiCard bay="03" icon="pending_actions" tone="secondary" label="Awaiting Approval" value={snapshot.pendingApproval} note="In the approval queue" />
         <KpiCard bay="04" icon="warning" tone="error" label="Validation Errors" value={snapshot.validationErrors} note={snapshot.validationErrors > 0 ? 'Needs review' : 'None this session'} />

@@ -41,8 +41,8 @@
   --f-stencil: 'Big Shoulders Stencil Display', 'Big Shoulders Display', sans-serif;
 }
 
-/* Light theme: a calm productivity-dashboard look -- white rounded cards with soft shadows on a dotted
-   light-grey canvas, near-black as the strong accent, and blue / green / orange carrying status. */
+/* Light theme: "ink and highlighter" -- white rounded cards on a dotted light-grey canvas, near-black ink as the
+   dominant colour, one sharp highlighter yellow for emphasis, and blue / green / orange carrying status. */
 .light {
   --c-surface: 243 243 241;
   --c-surface-container-lowest: 255 255 255;
@@ -66,6 +66,7 @@
   /* Named `white`/`text-white` throughout for historical reasons (it was literal white before this token existed);
      it's really "strongest-emphasis ink" and is near-black here so headings stay high-contrast in light mode. */
   --c-white: 17 17 17;
+  --c-accent: 255 210 48;
 
   --r-default: 8px;
   --r-sm: 10px;
@@ -76,15 +77,15 @@
   --r-card: 20px;
   --r-badge: 999px;
 
-  --f-sans: 'Figtree', system-ui, sans-serif;
-  --f-display: 'Figtree', system-ui, sans-serif;
-  --f-stencil: 'Figtree', system-ui, sans-serif;
+  --f-sans: 'Schibsted Grotesk', system-ui, sans-serif;
+  --f-display: 'Bricolage Grotesque', 'Schibsted Grotesk', system-ui, sans-serif;
+  --f-stencil: 'Bricolage Grotesque', 'Schibsted Grotesk', system-ui, sans-serif;
 }
 
 /* Light theme drops the signage voice: sentence case, normal tracking, medium weights. Two-class selectors so they
    win over single Tailwind utilities (uppercase, font-black, text-[10px]) without !important. */
 .light .font-display,
-.light .font-stencil { text-transform: none; letter-spacing: -0.015em; font-weight: 600; }
+.light .font-stencil { text-transform: none; letter-spacing: -0.03em; font-weight: 700; font-optical-sizing: auto; }
 .light .font-mono.uppercase { text-transform: none; letter-spacing: 0; font-family: var(--f-sans); font-size: 12px; font-weight: 500; }
 .light .btn { text-transform: none; letter-spacing: 0; font-weight: 600; }
 .light table { font-family: var(--f-sans); font-size: 13px; }
@@ -95,6 +96,40 @@
 .light input,
 .light select,
 .light textarea { font-family: var(--f-sans); }
+.light ::selection { background: rgb(var(--c-accent)); color: rgb(17 17 17); }
+
+/* The page tag is drawn on with a highlighter as each page loads. */
+@keyframes highlight-sweep {
+  from { background-size: 0% 72%; }
+  to { background-size: 100% 72%; }
+}
+.light .eyebrow {
+  background: linear-gradient(rgb(var(--c-accent)), rgb(var(--c-accent))) no-repeat left 60% / 100% 72%;
+  color: rgb(var(--c-on-surface));
+  padding: 0 5px;
+  margin-left: -5px;
+  animation: highlight-sweep 650ms 160ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.light .eyebrow.font-mono.uppercase { font-weight: 600; }
+
+/* Active navigation reads as an ink chip with a highlighter icon, echoing the black chips of the reference. */
+.light .nav-item[aria-current="page"] { background: rgb(var(--c-primary)); color: rgb(var(--c-on-primary)); }
+.light .nav-item[aria-current="page"]::before { display: none; }
+.light .nav-item[aria-current="page"] .material-symbols-outlined { color: rgb(var(--c-accent)); }
+
+/* The headline KPI is the one inverted card: ink background, highlighter number. */
+.light .kpi-hero { background: rgb(17 17 17); border-color: transparent; }
+.light .kpi-hero .font-display { color: rgb(var(--c-accent)); }
+.light .kpi-hero [class*="text-on-surface-variant"] { color: rgb(255 255 255 / 0.62); }
+.light .kpi-hero::after {
+  content: '';
+  position: absolute;
+  inset: auto -30% -70% auto;
+  width: 70%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgb(var(--c-accent) / 0.22), transparent 65%);
+  pointer-events: none;
+}
 
 @layer base {
   html, body { margin: 0; padding: 0; }
@@ -124,9 +159,13 @@
   background: repeating-linear-gradient(-45deg, rgb(var(--c-error)) 0 8px, rgb(var(--c-surface-container-lowest)) 8px 16px);
 }
 
-/* Light: a dotted canvas instead of the bay grid, and hatching softened to the fine stripes of a progress bar. */
+/* Light: a dotted canvas lit by a warm highlighter glow top-right and a cool wash bottom-left,
+   and hatching softened to the fine stripes of a progress bar. */
 .light .depot-floor {
-  background: radial-gradient(rgb(var(--c-on-surface) / 0.09) 1px, transparent 1.2px) 0 0 / 14px 14px;
+  background:
+    radial-gradient(ellipse 50% 38% at 92% -8%, rgb(var(--c-accent) / 0.30), transparent 70%),
+    radial-gradient(ellipse 42% 34% at -6% 108%, rgb(var(--c-secondary) / 0.10), transparent 70%),
+    radial-gradient(rgb(var(--c-on-surface) / 0.09) 1px, transparent 1.2px) 0 0 / 14px 14px;
   mask-image: none;
 }
 .light .hazard-stripe {
@@ -162,6 +201,7 @@
 @media (prefers-reduced-motion: reduce) {
   .page-reveal > * > *, .kpi-grid > * { animation: none; }
   .indeterminate-bar { animation: none; width: 100%; }
+  .light .eyebrow { animation: none; }
 }
 
 /* Google's required base rule for the Material Symbols ligature font to render as icons instead of literal text. */
