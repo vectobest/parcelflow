@@ -2,8 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Depot signage palette, daylight variant: warm paper floor, safety-amber signage, painted floor-marking green, hazard red. RGB channels for Tailwind alpha. */
+/* Depot signage palette: warm charcoal floor, safety-amber signage, painted floor-marking green, hazard red.
+   RGB channels for Tailwind alpha. :root holds the dark theme (default, no class needed); .light on <html>
+   overrides with the daylight variant -- toggled by ThemeContext.jsx / the pre-paint script in index.html. */
 :root {
+  --c-surface: 19 18 16;
+  --c-surface-container-lowest: 12 11 10;
+  --c-surface-container-low: 27 25 22;
+  --c-surface-container: 34 32 28;
+  --c-surface-container-high: 43 40 35;
+  --c-surface-container-highest: 54 50 44;
+  --c-on-surface: 236 229 214;
+  --c-on-surface-variant: 164 156 140;
+  --c-outline-variant: 74 69 60;
+  --c-primary: 255 178 0;
+  --c-primary-fixed-dim: 232 160 0;
+  --c-on-primary: 26 18 0;
+  --c-secondary: 150 176 198;
+  --c-secondary-container: 38 52 66;
+  --c-tertiary: 124 207 120;
+  --c-error: 255 103 72;
+  --c-error-container: 72 24 16;
+  --c-on-error: 36 8 0;
+  --c-white: 246 240 227;
+}
+
+.light {
   --c-surface: 245 241 232;
   --c-surface-container-lowest: 255 255 255;
   --c-surface-container-low: 255 253 248;
@@ -22,7 +46,7 @@
   --c-error: 179 45 21;
   --c-error-container: 250 223 217;
   --c-on-error: 255 246 243;
-  /* Named `white`/`text-white` throughout for historical reasons (it was literal white in the dark theme);
+  /* Named `white`/`text-white` throughout for historical reasons (it was literal white before this token existed);
      it's really "strongest-emphasis ink" and is near-black here so headings stay high-contrast in light mode. */
   --c-white: 20 16 10;
 }

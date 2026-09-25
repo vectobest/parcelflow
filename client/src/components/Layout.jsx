@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, animate, motion, useMotionValue, useTransform } from 'motion/react';
 import { useAuth } from '../state/AuthContext.jsx';
+import { useTheme } from '../state/ThemeContext.jsx';
 import { projectRest, releaseVelocity } from '../utils/gesture.js';
 import CommandPalette from './CommandPalette.jsx';
 import Icon from './Icon.jsx';
@@ -48,6 +49,7 @@ function useIsDesktop() {
 
 export default function Layout({ children }) {
   const { identity, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const isDesktop = useIsDesktop();
   const [menuOpen, setMenuOpen] = useState(false);
   // True only once the drawer has fully finished closing, so it stays grabbable mid-animation.
@@ -219,6 +221,14 @@ export default function Layout({ children }) {
             <span className="font-display font-extrabold uppercase tracking-[0.04em] text-[18px] text-on-surface truncate">{current?.label || 'ParcelFlow'}</span>
           </div>
           <div className="flex items-center gap-3 shrink-0">
+            <button
+              className="p-2 rounded-xl border border-white/[0.08] text-on-surface-variant hover:bg-surface-container active:bg-surface-container-high"
+              type="button"
+              aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+              onClick={toggleTheme}
+            >
+              <Icon name={theme === 'light' ? 'dark_mode' : 'light_mode'} className="text-[18px]" />
+            </button>
             <div className="hidden sm:flex items-center gap-3 pl-1.5">
               <div className="flex flex-col text-right">
                 <span className="text-[14px] font-semibold text-on-surface leading-tight truncate max-w-[160px]">{identity.name || identity.actor}</span>
