@@ -252,3 +252,32 @@
 .light .nav-item[aria-current="page"],
 .light .nav-item[aria-current="page"] .text-white { color: rgb(255 255 255); }
 .light .tile-name { font-stretch: 100%; }
+
+/* Surfaces pinned to literal colours in light mode, same reason as the text above: browser dark-mode tools
+   rewrite colour variables, which turned cards dark while literal-white panels stayed white. */
+.light body,
+.light .bg-surface { background-color: rgb(217 196 160); }
+.light .bg-surface-container-lowest,
+.light .bg-surface-container-low,
+.light .bg-surface-container-lowest\/70,
+.light .bg-surface-container-lowest\/90,
+.light .bg-surface-container-low\/80 { background-color: rgb(255 255 255); }
+.light .bg-surface-container,
+.light .bg-surface-container\/60,
+.light .bg-surface-container\/70 { background-color: rgb(244 242 236); }
+.light .bg-surface-container-high,
+.light .bg-surface-container-high\/80 { background-color: rgb(232 228 219); }
+.light .bg-surface-container-highest { background-color: rgb(212 206 194); }
+.light .bg-primary { background-color: rgb(0 0 0); }
+.light .bg-error-container { background-color: rgb(252 228 224); }
+.light .bg-secondary-container { background-color: rgb(226 234 248); }
+.light .hover\:bg-surface-container:hover { background-color: rgb(244 242 236); }
+.light .hover\:bg-surface-container-high:hover,
+.light .hover\:bg-surface-container-high\/70:hover,
+.light .active\:bg-surface-container-high:active { background-color: rgb(232 228 219); }
+.light .hover\:bg-primary:hover { background-color: rgb(46 46 46); }
+/* ...but the cream chrome and the neutral sticker keep their own backgrounds. */
+.light aside.sidebar,
+.light header.app-header,
+.light footer.app-footer { background-color: rgb(250 246 236); }
+.light span[data-tone="neutral"] { background-color: rgb(255 255 255); }
