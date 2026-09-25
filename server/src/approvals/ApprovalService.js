@@ -44,13 +44,14 @@ export class ApprovalService {
     });
   }
 
-  decide(approvalId, { actor = 'reviewer', role = 'REVIEWER', decision = 'APPROVED' } = {}) {
+  decide(approvalId, { actor = 'reviewer', role = 'REVIEWER', decision = 'APPROVED', name } = {}) {
     this.#authorizationService.assertPermission(role, 'approve');
     const approval = this.#repository.get(approvalId);
     if (!approval) throw new NotFoundError('Approval was not found.');
     if (approval.state !== 'PENDING_APPROVAL') throw new ConflictError('Approval has already been decided.');
 
-    const updated = { ...approval, state: decision, decidedAt: this.#clock().toISOString(), decidedBy: actor };
+    // decidedBy stays the durable actor identifier (email/token) for audit purposes; decidedByName is the display-friendly label shown in the UI.
+    const updated = { ...approval, state: decision, decidedAt: this.#clock().toISOString(), decidedBy: actor, decidedByName: name || actor };
     this.#repository.save(updated);
 
     const policy = this.#policyService.get(updated.policyVersion);

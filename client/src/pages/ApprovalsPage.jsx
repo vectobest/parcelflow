@@ -53,14 +53,14 @@ export default function ApprovalsPage() {
             title={`€${approval.parcel?.value}`}
             actions={<Badge tone={approval.state === 'PENDING_APPROVAL' ? 'MEDIUM' : approval.state === 'APPROVED' ? 'LOW' : 'HIGH'}>{approval.state.replace('_', ' ')}</Badge>}
           >
-            <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-sm">{approval.parcel?.weight}kg &middot; {approval.parcel?.destinationCountry} &middot; policy {approval.policyVersion}</p>
+            <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-sm">{approval.parcel?.weight}kg &middot; {approval.parcel?.destinationCountry} &middot; rules {approval.policyVersion}</p>
             {approval.state === 'PENDING_APPROVAL' ? (
               <div className="flex gap-space-sm">
                 <Button variant="danger" disabled={busyId === approval.approvalId} onClick={() => decide(approval.approvalId, 'reject')} className="flex-1">Reject</Button>
                 <Button variant="primary" disabled={busyId === approval.approvalId} onClick={() => decide(approval.approvalId, 'approve')} className="flex-1">Approve</Button>
               </div>
             ) : (
-              <p className="font-body-compact text-body-compact text-on-surface-variant">Decided by {approval.decidedBy}</p>
+              <p className="font-body-compact text-body-compact text-on-surface-variant">Decided by {approval.decidedByName || approval.decidedBy}</p>
             )}
           </Panel>
         ))}

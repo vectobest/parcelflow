@@ -13,7 +13,7 @@ export class ApprovalController {
     router.post('/approvals/:id/:action', (req, res, next) => {
       const { action } = req.params;
       if (!['approve', 'reject'].includes(action)) return next(new ValidationError(`Unknown approval action "${action}".`));
-      const result = this.#approvalService.decide(req.params.id, { actor: req.identity.actor, role: req.identity.role, decision: action === 'approve' ? 'APPROVED' : 'REJECTED' });
+      const result = this.#approvalService.decide(req.params.id, { actor: req.identity.actor, role: req.identity.role, name: req.identity.name, decision: action === 'approve' ? 'APPROVED' : 'REJECTED' });
       res.status(200).json(result);
     });
 

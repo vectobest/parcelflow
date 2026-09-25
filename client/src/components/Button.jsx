@@ -8,8 +8,8 @@ const VARIANTS = {
 };
 
 const SIZES = {
-  sm: 'px-3 py-1.5 text-[12px] rounded-sm',
-  md: 'px-4 py-2 text-[14px] rounded-sm'
+  sm: 'px-2.5 py-1 text-[11px] rounded-sm',
+  md: 'px-3.5 py-1.5 text-[12px] rounded-sm'
 };
 
 const PRESS_SPRING = { type: 'spring', visualDuration: 0.15, bounce: 0 };

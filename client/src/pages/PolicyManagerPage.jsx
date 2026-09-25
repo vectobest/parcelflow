@@ -64,7 +64,12 @@ export default function PolicyManagerPage() {
 
   return (
     <div className="flex flex-col gap-space-sm">
-      <PageHeader eyebrow="Governance" title="Policy Manager" description="Active policies are immutable. Changes go draft → validated → approved → active." />
+      <PageHeader eyebrow="Governance" title="Routing Rules" description="Manage the rules that decide how parcels are routed." />
+
+      <details className="text-[11px] text-on-surface-variant">
+        <summary className="cursor-pointer select-none hover:text-on-surface">How rule changes work</summary>
+        <p className="mt-1.5 font-mono leading-relaxed">A live version can't be edited directly. A change is saved as a new draft, then moves through validate → approve → activate before it takes effect. Rolling back reactivates a previous version.</p>
+      </details>
 
       {isAdmin && (
         <Panel icon="gavel" title="New Draft (Rule Builder)">

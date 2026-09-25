@@ -11,11 +11,15 @@ import { Field, Input } from '../components/Field.jsx';
 import { tableWrap, table, thead, th, tr, td } from '../components/table.js';
 
 const STATUS_TONE = { routed: 'routed', pending: 'pending', error: 'error', rejected: 'rejected' };
+// Batch upload is one synchronous request/response with no incremental progress from the server,
+// so this names the stage honestly instead of faking a percentage.
+const STAGE_LABEL = { reading: 'Reading file', checking: 'Checking and routing parcels' };
 
 export default function IntakePage() {
   const [form, setForm] = useState({ id: '', weight: '1.5', value: '120', destinationCountry: 'NL' });
   const [batch, setBatch] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState(null);
   const fileRef = useRef(null);
   const handleError = useApiError();
   const toast = useToast();
@@ -23,6 +27,7 @@ export default function IntakePage() {
   async function routeParcel(event) {
     event.preventDefault();
     setBusy(true);
+    setStage('checking');
     try {
       const result = await api('/parcels/route', { body: { parcel: { id: form.id || undefined, weight: Number(form.weight), value: Number(form.value), destinationCountry: form.destinationCountry } } });
       setBatch(result);
@@ -31,19 +36,22 @@ export default function IntakePage() {
       handleError(error, 'Routing parcel');
     } finally {
       setBusy(false);
+      setStage(null);
     }
   }
 
   async function submitBatch(parcels, label) {
     setBusy(true);
+    setStage('checking');
     try {
       const result = await api('/batches', { body: { parcels, idempotencyKey: `${label}-${Date.now()}` } });
       setBatch(result);
-      toast(result.deduplicated ? 'This batch was already processed.' : `Batch routed: ${result.results.length} parcels under policy ${result.policyVersion}.`, result.state === 'PARTIALLY_FAILED' ? 'warning' : '');
+      toast(result.deduplicated ? 'This batch was already processed.' : `Batch routed: ${result.results.length} parcels under rules ${result.policyVersion}.`, result.state === 'PARTIALLY_FAILED' ? 'warning' : '');
     } catch (error) {
       handleError(error, 'Processing batch');
     } finally {
       setBusy(false);
+      setStage(null);
     }
   }
 
@@ -56,8 +64,10 @@ export default function IntakePage() {
     if (!file) return;
     const format = file.name.endsWith('.xml') ? 'xml' : 'json';
     const reader = new FileReader();
+    setBusy(true);
+    setStage('reading');
     reader.onload = async () => {
-      setBusy(true);
+      setStage('checking');
       try {
         const result = await api('/batches/upload', { body: { content: reader.result, format, idempotencyKey: `upload-${Date.now()}` } });
         setBatch(result);
@@ -66,6 +76,7 @@ export default function IntakePage() {
         handleError(error, 'Uploading batch');
       } finally {
         setBusy(false);
+        setStage(null);
         if (fileRef.current) fileRef.current.value = '';
       }
     };
@@ -90,7 +101,7 @@ export default function IntakePage() {
         </Panel>
 
         <Panel icon="upload_file" title="Batch Upload">
-          <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-sm">JSON or XML, up to 5&nbsp;MB / 5,000 parcels. Parsed and validated on the server before anything is routed.</p>
+          <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-sm">Upload parcel data as a JSON or XML file. We'll check it before processing.</p>
           <Field label="Choose a file" htmlFor="batch-file">
             <input id="batch-file" ref={fileRef} type="file" accept=".json,.xml,application/json,application/xml,text/xml" onChange={handleFile} disabled={busy}
               className="w-full font-code-sm text-code-sm text-on-surface-variant file:mr-space-sm file:px-space-sm file:py-space-2xs file:border-0 file:bg-surface-container-highest file:text-on-surface file:uppercase file:font-code-sm file:text-code-sm" />
@@ -98,6 +109,18 @@ export default function IntakePage() {
           <Button variant="ghost" type="button" onClick={handleSample} disabled={busy} className="w-full py-space-sm mt-space-sm">
             Generate an 80-Parcel Sample Batch
           </Button>
+          {stage && (
+            <div className="mt-space-sm" role="status" aria-live="polite">
+              <div className="h-1 bg-surface-container-highest overflow-hidden rounded-sm">
+                <div className="h-full w-1/3 bg-primary indeterminate-bar" />
+              </div>
+              <p className="mt-1.5 text-[11px] text-on-surface-variant">{STAGE_LABEL[stage]}&hellip;</p>
+            </div>
+          )}
+          <details className="mt-space-sm">
+            <summary className="text-[11px] text-on-surface-variant cursor-pointer select-none hover:text-on-surface">Technical details</summary>
+            <p className="mt-1.5 font-mono text-[11px] text-on-surface-variant leading-relaxed">JSON or XML, up to 5&nbsp;MB / 5,000 parcels. Parsed and validated on the server before anything is routed.</p>
+          </details>
         </Panel>
       </div>
 
@@ -105,7 +128,7 @@ export default function IntakePage() {
         <Panel
           icon="fact_check"
           title={`Batch ${batch.batchId.slice(0, 8)}`}
-          meta={`${batch.results.length} parcels · policy ${batch.policyVersion}`}
+          meta={`${batch.results.length} parcels · rules ${batch.policyVersion}`}
           actions={<Badge tone={batch.state === 'COMPLETED' ? 'LOW' : 'MEDIUM'}>{batch.state}</Badge>}
           bodyClassName=""
         >
