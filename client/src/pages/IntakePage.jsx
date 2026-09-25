@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import Icon from '../components/Icon.jsx';
 import { api } from '../api/client.js';
 import { useApiError } from '../hooks/useApiError.js';
 import { useToast } from '../state/ToastContext.jsx';
@@ -13,13 +14,37 @@ import { tableWrap, table, thead, th, tr, td } from '../components/table.js';
 const STATUS_TONE = { routed: 'routed', pending: 'pending', error: 'error', rejected: 'rejected' };
 // Batch upload is one synchronous request/response with no incremental progress from the server,
 // so this names the stage honestly instead of faking a percentage.
-const STAGE_LABEL = { reading: 'Reading file', checking: 'Checking and routing parcels' };
+const STAGE_LABEL = { reading: 'Reading the file', checking: 'Checking and routing parcels' };
+const ACCEPTED = /\.(json|xml)$/i;
+
+function formatSize(bytes) {
+  return bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Parcels riding a conveyor while the batch is read and routed. The server reports no progress, so this
+// shows activity and the current stage only -- never a percentage.
+function ParcelLoader({ stage, fileName }) {
+  return (
+    <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 py-2">
+      <div className="conveyor relative w-full max-w-[260px] h-10" aria-hidden="true">
+        <span className="conveyor-parcel" />
+        <span className="conveyor-parcel" />
+        <span className="conveyor-parcel" />
+        <span className="conveyor-belt" />
+      </div>
+      <p className="text-[13px] font-semibold text-on-surface text-center">{STAGE_LABEL[stage]}&hellip;</p>
+      {fileName && <p className="text-[12px] text-on-surface-variant -mt-2 truncate max-w-full">{fileName}</p>}
+    </div>
+  );
+}
 
 export default function IntakePage() {
   const [form, setForm] = useState({ id: '', weight: '1.5', value: '120', destinationCountry: 'NL' });
   const [batch, setBatch] = useState(null);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState(null);
+  const [chosen, setChosen] = useState(null);
+  const [dragging, setDragging] = useState(false);
   const fileRef = useRef(null);
   const handleError = useApiError();
   const toast = useToast();
@@ -60,9 +85,24 @@ export default function IntakePage() {
   }
 
   function handleFile(event) {
-    const file = event.target.files?.[0];
+    uploadFile(event.target.files?.[0]);
+  }
+
+  function handleDrop(event) {
+    event.preventDefault();
+    setDragging(false);
+    if (!busy) uploadFile(event.dataTransfer.files?.[0]);
+  }
+
+  function uploadFile(file) {
     if (!file) return;
-    const format = file.name.endsWith('.xml') ? 'xml' : 'json';
+    if (!ACCEPTED.test(file.name)) {
+      toast(`"${file.name}" isn't a JSON or XML file. Choose a .json or .xml file.`, 'error');
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
+    setChosen({ name: file.name, size: file.size });
+    const format = file.name.toLowerCase().endsWith('.xml') ? 'xml' : 'json';
     const reader = new FileReader();
     setBusy(true);
     setStage('reading');
@@ -71,7 +111,7 @@ export default function IntakePage() {
       try {
         const result = await api('/batches/upload', { body: { content: reader.result, format, idempotencyKey: `upload-${Date.now()}` } });
         setBatch(result);
-        toast(`Uploaded batch routed: ${result.results.length} parcels.`, result.state === 'PARTIALLY_FAILED' ? 'warning' : '');
+        toast(`Uploaded ${file.name}: ${result.results.length} parcels routed.`, result.state === 'PARTIALLY_FAILED' ? 'warning' : '');
       } catch (error) {
         handleError(error, 'Uploading batch');
       } finally {
@@ -102,21 +142,36 @@ export default function IntakePage() {
 
         <Panel icon="upload_file" title="Batch Upload">
           <p className="font-body-compact text-body-compact text-on-surface-variant mb-space-sm">Upload parcel data as a JSON or XML file. We'll check it before processing.</p>
-          <Field label="Choose a file" htmlFor="batch-file">
-            <input id="batch-file" ref={fileRef} type="file" accept=".json,.xml,application/json,application/xml,text/xml" onChange={handleFile} disabled={busy}
-              className="w-full font-code-sm text-code-sm text-on-surface-variant file:mr-space-sm file:px-space-sm file:py-space-2xs file:border-0 file:bg-surface-container-highest file:text-on-surface file:uppercase file:font-code-sm file:text-code-sm" />
-          </Field>
+          <label
+            htmlFor="batch-file"
+            onDragOver={(e) => { e.preventDefault(); if (!busy) setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            className={`drop-zone flex flex-col items-center justify-center text-center gap-1.5 min-h-[168px] px-4 py-5 rounded-lg border-2 border-dashed transition-colors focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 ${
+              busy ? 'cursor-progress border-outline-variant' : 'cursor-pointer'
+            } ${dragging ? 'is-dragging border-primary bg-surface-container' : 'border-outline-variant hover:border-on-surface-variant hover:bg-surface-container'}`}
+          >
+            <input id="batch-file" ref={fileRef} type="file" accept=".json,.xml,application/json,application/xml,text/xml" onChange={handleFile} disabled={busy} className="sr-only" />
+            {stage ? (
+              <ParcelLoader stage={stage} fileName={chosen?.name} />
+            ) : (
+              <>
+                <Icon name={dragging ? 'move_to_inbox' : 'upload_file'} className="text-[30px] text-on-surface" />
+                <span className="text-[14px] font-semibold text-on-surface">{dragging ? 'Drop to upload' : 'Drop a JSON or XML file here'}</span>
+                <span className="text-[13px] text-on-surface-variant">or <span className="underline underline-offset-2 text-on-surface">choose a file</span></span>
+                <span className="text-[12px] text-on-surface-variant mt-1">Up to 5 MB and 5,000 parcels</span>
+                {chosen && (
+                  <span className="mt-2 inline-flex items-center gap-1.5 max-w-full rounded-sm bg-surface-container px-2 py-1 text-[12px] text-on-surface">
+                    <Icon name="description" className="text-[15px] shrink-0" />
+                    <span className="truncate">Last upload: {chosen.name} ({formatSize(chosen.size)})</span>
+                  </span>
+                )}
+              </>
+            )}
+          </label>
           <Button variant="ghost" type="button" onClick={handleSample} disabled={busy} className="w-full py-space-sm mt-space-sm">
             Generate an 80-Parcel Sample Batch
           </Button>
-          {stage && (
-            <div className="mt-space-sm" role="status" aria-live="polite">
-              <div className="h-1 bg-surface-container-highest overflow-hidden rounded-sm">
-                <div className="h-full w-1/3 bg-primary indeterminate-bar" />
-              </div>
-              <p className="mt-1.5 text-[11px] text-on-surface-variant">{STAGE_LABEL[stage]}&hellip;</p>
-            </div>
-          )}
           <details className="mt-space-sm">
             <summary className="text-[11px] text-on-surface-variant cursor-pointer select-none hover:text-on-surface">Technical details</summary>
             <p className="mt-1.5 font-mono text-[11px] text-on-surface-variant leading-relaxed">JSON or XML, up to 5&nbsp;MB / 5,000 parcels. Parsed and validated on the server before anything is routed.</p>
@@ -141,7 +196,10 @@ export default function IntakePage() {
                     <td className={`${td} text-on-surface`}>{r.id}</td>
                     <td className={td}>{r.parcel.weight}kg</td>
                     <td className={td}>&euro;{r.parcel.value}</td>
-                    <td className={td}>{r.parcel.destinationCountry || '—'}</td>
+                    <td className={td}>
+                      {r.parcel.destinationCountry || '—'}
+                      {r.parcel.countrySource === 'postal-code' && <span className="block text-[11px] text-on-surface-variant">from postal code</span>}
+                    </td>
                     <td className={td}><Badge tone={STATUS_TONE[r.outcome.status]}>{r.outcome.department || r.outcome.decision}</Badge></td>
                     <td className={`${td} text-on-surface-variant`}>{r.outcome.reason}</td>
                   </tr>

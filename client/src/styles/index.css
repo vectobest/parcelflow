@@ -326,3 +326,36 @@
 .light span[data-tone="caution"] { background-color: rgb(242 183 5); color: rgb(0 0 0); border-color: rgb(242 183 5); }
 .light span[data-tone="danger"] { background-color: rgb(215 38 30); color: rgb(255 255 255); border-color: rgb(215 38 30); }
 .light span[data-tone="clear"] { background-color: rgb(255 255 255); color: rgb(23 128 74); border-color: rgb(23 128 74); }
+
+/* Upload loader: parcels ride a conveyor belt. Loops while the request runs; it never implies progress. */
+@keyframes parcel-ride {
+  0% { left: -24px; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { left: calc(100% + 2px); opacity: 0; }
+}
+@keyframes belt-run { to { background-position: 16px 0; } }
+.conveyor { overflow: hidden; }
+.conveyor-belt {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 8px; border-radius: 4px;
+  background: repeating-linear-gradient(90deg, #3a342a 0 8px, #6b6152 8px 16px);
+  animation: belt-run 0.5s linear infinite;
+}
+.conveyor-parcel {
+  position: absolute; bottom: 9px; width: 22px; height: 18px; border-radius: 2px;
+  background: linear-gradient(#e2c690, #c79d5c);
+  box-shadow: inset 0 0 0 1px rgb(90 64 30 / 0.45);
+  animation: parcel-ride 2.1s linear infinite;
+}
+/* Packing tape across the top of each box. */
+.conveyor-parcel::after { content: ''; position: absolute; left: 9px; top: 0; bottom: 0; width: 4px; background: rgb(242 183 5 / 0.85); }
+.conveyor-parcel:nth-child(2) { animation-delay: -0.7s; height: 14px; width: 18px; }
+.conveyor-parcel:nth-child(3) { animation-delay: -1.4s; }
+@media (prefers-reduced-motion: reduce) {
+  .conveyor-belt, .conveyor-parcel { animation: none; }
+  .conveyor-parcel { left: calc(50% - 11px); }
+  .conveyor-parcel:nth-child(n + 2) { display: none; }
+}
+.light .drop-zone { border-color: rgb(0 0 0 / 0.28); }
+.light .drop-zone:hover { border-color: rgb(0 0 0 / 0.55); }
+.light .drop-zone.is-dragging { border-color: rgb(0 0 0); }

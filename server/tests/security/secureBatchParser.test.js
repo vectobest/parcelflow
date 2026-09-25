@@ -66,3 +66,26 @@ test('accepts a well-formed XML batch', () => {
   assert.equal(parcels.length, 1);
   assert.equal(parcels[0].Id, 'P-1');
 });
+
+const CONTAINER_XML = `<?xml version="1.0"?>
+<Container>
+  <Id>68465468</Id>
+  <parcels>
+    <Parcel><Receipient><Name>A</Name><Address><PostalCode>4744AT</PostalCode><City>Bosschenhoofd</City></Address></Receipient><Weight>0.02</Weight><Value>0.0</Value></Parcel>
+    <Parcel><Receipient><Name>B</Name><Address><PostalCode>SW1A 1AA</PostalCode><City>London</City></Address></Receipient><Weight>2.0</Weight><Value>0.0</Value></Parcel>
+  </parcels>
+</Container>`;
+
+test('reads the container format: ids from the container id, NL only for Dutch postcodes', () => {
+  const parcels = parser.parse(CONTAINER_XML, 'xml');
+  assert.equal(parcels.length, 2);
+  assert.equal(parcels[0].id, '68465468-01');
+  assert.equal(parcels[0].destinationCountry, 'NL');
+  assert.equal(parcels[0].countrySource, 'postal-code');
+  assert.equal(parcels[1].destinationCountry, undefined, 'a non-Dutch postcode is not guessed');
+});
+
+test('a file with no parcels says so instead of reporting a size range', () => {
+  assert.throws(() => parser.parse('<Container><Id>1</Id><parcels></parcels></Container>', 'xml'), /No parcels were found/);
+  assert.throws(() => parser.parse('[]', 'json'), /No parcels were found/);
+});

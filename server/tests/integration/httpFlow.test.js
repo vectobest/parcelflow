@@ -232,3 +232,19 @@ test('pre-assigning a role is admin-only and rejects an already-signed-in email'
   const rejected = await admin.post('/api/auth/pending-roles').send({ email: 'op7@example.com', role: 'ADMIN' });
   assert.equal(rejected.status, 422);
 });
+
+test('a container XML upload routes its parcels and marks the inferred country', async () => {
+  const { app } = buildApp();
+  const operator = request.agent(app);
+  await operator.post('/api/auth/dev-login').send({ email: 'container-op@example.com', role: 'OPERATOR' });
+  const content = `<Container><Id>77</Id><parcels>
+    <Parcel><Receipient><Address><PostalCode>3036MN</PostalCode></Address></Receipient><Weight>2.0</Weight><Value>0.0</Value></Parcel>
+    <Parcel><Receipient><Address><PostalCode>4724BE</PostalCode></Address></Receipient><Weight>100.0</Weight><Value>2000.0</Value></Parcel>
+  </parcels></Container>`;
+  const res = await operator.post('/api/batches/upload').send({ content, format: 'xml', idempotencyKey: 'container-1' });
+  assert.equal(res.status, 201);
+  assert.deepEqual(res.body.results.map((r) => r.id), ['77-01', '77-02']);
+  assert.equal(res.body.results[0].outcome.status, 'routed');
+  assert.equal(res.body.results[0].parcel.countrySource, 'postal-code');
+  assert.equal(res.body.results[1].outcome.status, 'pending');
+});

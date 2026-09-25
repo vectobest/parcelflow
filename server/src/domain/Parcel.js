@@ -5,12 +5,14 @@
  * no knowledge of HTTP, storage, or routing rules.
  */
 export class Parcel {
-  constructor({ id = null, weight, value, destinationCountry, recipient = null } = {}) {
+  constructor({ id = null, weight, value, destinationCountry, recipient = null, countrySource = null } = {}) {
     this.id = id;
     this.weight = weight;
     this.value = value;
     this.destinationCountry = destinationCountry;
     this.recipient = recipient;
+    // 'postal-code' when the parser inferred the country from the address; null when the input supplied it.
+    this.countrySource = countrySource;
   }
 
   static fromInput(raw, index = 0) {
@@ -21,7 +23,8 @@ export class Parcel {
       weight: Parcel.#toNumber(source.weight ?? source.Weight),
       value: Parcel.#toNumber(source.value ?? source.Value),
       destinationCountry: source.destinationCountry ?? source.country ?? source.Country,
-      recipient: source.recipient ?? source.Recipient ?? null
+      recipient: source.recipient ?? source.Recipient ?? null,
+      countrySource: source.countrySource === 'postal-code' ? 'postal-code' : null
     });
   }
 
@@ -31,6 +34,6 @@ export class Parcel {
   }
 
   toJSON() {
-    return { id: this.id, weight: this.weight, value: this.value, destinationCountry: this.destinationCountry, recipient: this.recipient };
+    return { id: this.id, weight: this.weight, value: this.value, destinationCountry: this.destinationCountry, recipient: this.recipient, countrySource: this.countrySource };
   }
 }
