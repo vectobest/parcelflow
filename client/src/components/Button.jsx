@@ -19,7 +19,7 @@ export default function Button({ variant = 'primary', size = 'md', className = '
     <motion.button
       whileTap={{ scale: 0.97 }}
       transition={PRESS_SPRING}
-      className={`inline-flex items-center justify-center gap-2 font-bold uppercase tracking-[0.06em] transition-colors disabled:opacity-40 disabled:pointer-events-none ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
+      className={`btn inline-flex items-center justify-center gap-2 font-bold uppercase tracking-[0.06em] transition-colors disabled:opacity-40 disabled:pointer-events-none ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
       {...props}
     >
       {children}

@@ -13,7 +13,7 @@ const HEALTH_TONE = { HEALTHY: 'LOW', DEGRADED: 'MEDIUM', CRITICAL: 'HIGH' };
 const KPI_TONES = {
   primary: { value: 'text-white', mark: 'bg-on-surface-variant/40' },
   tertiary: { value: 'text-tertiary', mark: 'bg-tertiary' },
-  secondary: { value: 'text-white', mark: 'bg-primary' },
+  secondary: { value: 'text-white', mark: 'bg-caution' },
   error: { value: 'text-error', mark: 'bg-error' }
 };
 
@@ -21,11 +21,11 @@ const KPI_TONES = {
 function KpiCard({ bay, icon, tone, label, value, note }) {
   const t = KPI_TONES[tone] || KPI_TONES.primary;
   return (
-    <div className="relative rounded-sm bg-surface-container-low border border-white/[0.08] p-3.5 pt-4 flex flex-col justify-between overflow-hidden">
-      <span className={`absolute inset-x-0 top-0 h-[3px] ${t.mark}`} aria-hidden="true" />
+    <div className="card relative rounded-card bg-surface-container-low border border-white/[0.08] p-3.5 pt-4 flex flex-col justify-between overflow-hidden">
+      <span className={`kpi-mark absolute inset-x-0 top-0 h-[3px] ${t.mark}`} aria-hidden="true" />
       <div className="flex items-start justify-between gap-3">
         <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-on-surface-variant">{label}</span>
-        <span className="font-mono text-[9px] tracking-[0.12em] text-on-surface-variant/60 shrink-0">BAY {bay}</span>
+        <span className="bay-label font-mono text-[9px] tracking-[0.12em] text-on-surface-variant/60 shrink-0">BAY {bay}</span>
       </div>
       <div className="mt-1.5 flex items-end justify-between gap-3">
         <div className={`font-display font-black text-[30px] leading-none tabular-nums ${t.value}`}>{value}</div>
@@ -76,7 +76,7 @@ export default function OverviewPage() {
       </div>
 
       {attentionRequired.length > 0 && (
-        <section className="rounded-sm border border-error/40 bg-error-container/40 overflow-hidden" aria-labelledby="attention-heading">
+        <section className="card rounded-card border border-error/40 bg-error-container/40 overflow-hidden" aria-labelledby="attention-heading">
           <div className="h-2 hazard-stripe-error" aria-hidden="true" />
           <div className="p-4 flex flex-col gap-3">
             <div className="flex items-center gap-2.5 flex-wrap">

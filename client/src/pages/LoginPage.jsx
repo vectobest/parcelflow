@@ -34,9 +34,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-surface text-on-surface font-sans flex items-center justify-center p-4 relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none z-0 depot-floor" aria-hidden="true" />
-      <div className="w-full max-w-md relative z-10">
+      <div className="card w-full max-w-md relative z-10 rounded-card overflow-hidden">
         <div className="h-2 hazard-stripe" aria-hidden="true" />
-        <div className="bg-surface-container-low border border-t-0 border-white/[0.08] shadow-2xl">
+        <div className="bg-surface-container-low border border-t-0 border-white/[0.08] shadow-2xl rounded-b-card">
           <div className="px-6 pt-6 pb-5 border-b border-white/[0.06] flex items-start justify-between gap-4">
             <div>
               <span className="font-mono text-[10px] text-primary tracking-[0.16em] uppercase">Control Room · Dock 02</span>

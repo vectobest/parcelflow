@@ -24,15 +24,19 @@ export default {
         'error': 'rgb(var(--c-error) / <alpha-value>)',
         'error-container': 'rgb(var(--c-error-container) / <alpha-value>)',
         'on-error': 'rgb(var(--c-on-error) / <alpha-value>)',
+        'caution': 'rgb(var(--c-caution) / <alpha-value>)',
         'white': 'rgb(var(--c-white) / <alpha-value>)'
       },
+      // Radii and fonts are CSS variables too, so the light theme can be rounded and sentence-case while dark stays square signage.
       borderRadius: {
-        DEFAULT: '0.125rem',
-        sm: '0.125rem',
-        lg: '0.1875rem',
-        xl: '0.25rem',
-        '2xl': '0.375rem',
-        '3xl': '0.5rem',
+        DEFAULT: 'var(--r-default)',
+        sm: 'var(--r-sm)',
+        lg: 'var(--r-lg)',
+        xl: 'var(--r-xl)',
+        '2xl': 'var(--r-2xl)',
+        '3xl': 'var(--r-3xl)',
+        card: 'var(--r-card)',
+        badge: 'var(--r-badge)',
         full: '9999px'
       },
       spacing: {
@@ -49,14 +53,14 @@ export default {
         gutter: '0.5rem'
       },
       fontFamily: {
-        sans: ['Barlow', 'sans-serif'],
-        display: ['"Big Shoulders Display"', 'Barlow', 'sans-serif'],
-        stencil: ['"Big Shoulders Stencil Display"', '"Big Shoulders Display"', 'sans-serif'],
+        sans: ['var(--f-sans)'],
+        display: ['var(--f-display)'],
+        stencil: ['var(--f-stencil)'],
         mono: ['"IBM Plex Mono"', 'monospace'],
         'code-sm': ['"IBM Plex Mono"', 'monospace'],
         'kpi-micro': ['"IBM Plex Mono"', 'monospace'],
-        'body-regular': ['Barlow', 'sans-serif'],
-        'body-compact': ['Barlow', 'sans-serif']
+        'body-regular': ['var(--f-sans)'],
+        'body-compact': ['var(--f-sans)']
       },
       fontSize: {
         'code-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.02em', fontWeight: '500' }],

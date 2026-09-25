@@ -2,7 +2,7 @@ import Icon from './Icon.jsx';
 
 export default function Panel({ icon, title, meta, actions, children, className = '', bodyClassName = 'p-4' }) {
   return (
-    <div className={`rounded-sm bg-surface-container-low border border-white/[0.08] flex flex-col ${className}`}>
+    <div className={`card rounded-card bg-surface-container-low border border-white/[0.08] flex flex-col ${className}`}>
       {(icon || title || actions) && (
         <div className="px-4 pt-3 pb-2.5 flex items-center justify-between flex-wrap gap-2 border-b border-white/[0.06]">
           <div className="flex items-center gap-2 min-w-0">

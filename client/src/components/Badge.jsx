@@ -1,5 +1,5 @@
 const DANGER = 'bg-error/15 text-error border-error/50';
-const CAUTION = 'bg-primary/10 text-primary border-primary/50';
+const CAUTION = 'bg-caution/10 text-caution border-caution/50';
 const CLEAR = 'bg-tertiary/10 text-tertiary border-tertiary/50';
 
 const TONES = {
@@ -17,12 +17,12 @@ const TONES = {
   neutral: 'bg-surface-container-high text-on-surface-variant border-white/[0.12]'
 };
 
-// Stencilled status tag: square corners and a status square, so state reads by shape as well as colour.
+// Status tag with a marker next to the label, so state reads by more than colour alone.
 export default function Badge({ tone, children }) {
   const classes = TONES[tone] || TONES.neutral;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-sm border font-mono text-[10px] font-semibold uppercase tracking-[0.12em] whitespace-nowrap ${classes}`}>
-      <span className="w-1.5 h-1.5 bg-current" aria-hidden="true" />
+    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-badge border font-mono text-[10px] font-semibold uppercase tracking-[0.12em] whitespace-nowrap ${classes}`}>
+      <span className="w-1.5 h-1.5 rounded-badge bg-current" aria-hidden="true" />
       {children}
     </span>
   );
