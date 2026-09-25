@@ -247,7 +247,7 @@ export default function Layout({ children }) {
           </div>
         </main>
 
-        <footer className="fixed bottom-0 left-0 lg:left-64 right-0 h-8 bg-surface-container-lowest/90 backdrop-blur-xl border-t border-white/[0.08] z-30 flex items-center justify-between px-6 font-mono text-[11px]">
+        <footer className="app-footer fixed bottom-0 left-0 lg:left-64 right-0 h-8 bg-surface-container-lowest/90 backdrop-blur-xl border-t border-white/[0.08] z-30 flex items-center justify-between px-6 font-mono text-[11px]">
           <div className="flex items-center gap-2 text-on-surface-variant min-w-0">
             <span className="w-2 h-2 bg-tertiary shrink-0" />
             <span className="text-white font-bold shrink-0">ParcelFlow</span>

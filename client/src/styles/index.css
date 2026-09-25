@@ -112,12 +112,22 @@
 .light .eyebrow:not([data-step]) { display: none; }
 .light .eyebrow { background: rgb(0 0 0); color: rgb(255 255 255); border-radius: 2px; }
 
-/* Chrome sits on the kraft; the current page is the one white label on it. */
+/* Sidebar and top bar are light cream, set apart from the kraft floor; everything on them is printed black. */
 .light .sidebar,
-.light .app-header { background: rgb(var(--c-surface)); backdrop-filter: none; border-color: rgb(var(--c-edge) / 0.35); }
-.light .nav-item[aria-current="page"] { background: rgb(255 255 255); color: rgb(0 0 0); box-shadow: 0 1.5px 0 rgb(var(--c-edge) / 0.45); }
+.light .app-header { background: rgb(250 246 236); backdrop-filter: none; border-color: rgb(0 0 0 / 0.14); box-shadow: none; }
+.light .sidebar::before { background: rgb(250 246 236); }
+.light .app-footer { left: 0; background: rgb(250 246 236); backdrop-filter: none; border-color: rgb(0 0 0 / 0.14); }
+.light .app-footer [class*="text-on-surface-variant"] { color: rgb(74 64 48); }
+.light .sidebar [class*="text-on-surface-variant"],
+.light .app-header [class*="text-on-surface-variant"] { color: rgb(74 64 48); }
+.light .sidebar [class*="border-white"],
+.light .app-header [class*="border-white"] { border-color: rgb(0 0 0 / 0.16); }
+.light .app-header button[type="button"] { background-color: rgb(255 255 255); }
+.light .nav-item:not([aria-current="page"]):hover { background: rgb(0 0 0 / 0.06); color: rgb(0 0 0); }
+/* The current page is the one solid black chip. */
+.light .nav-item[aria-current="page"] { background: rgb(0 0 0); color: rgb(255 255 255); }
 .light .nav-item[aria-current="page"]::before { display: none; }
-.light .nav-item[aria-current="page"] .material-symbols-outlined { color: rgb(0 0 0); }
+.light .nav-item[aria-current="page"] .material-symbols-outlined { color: rgb(255 255 255); }
 
 /* Status stickers: tape for waiting, red for held or failed, print-on-white for cleared. */
 .light [data-tone="caution"] { background: rgb(var(--c-tape)); color: rgb(0 0 0); border-color: rgb(var(--c-tape)); }
