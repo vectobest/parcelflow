@@ -1,12 +1,15 @@
 import { Router } from 'express';
 
 export class DashboardController {
-  #dashboardService;
-  constructor({ dashboardService }) { this.#dashboardService = dashboardService; }
+  #readModelsFor;
+  constructor({ readModelsFor }) { this.#readModelsFor = readModelsFor; }
 
   buildRouter() {
     const router = Router();
-    router.get('/dashboard', (_req, res) => res.status(200).json(this.#dashboardService.overview()));
+    router.get('/dashboard', (req, res) => {
+      const { scope, dashboardService } = this.#readModelsFor(req.identity);
+      res.status(200).json({ ...dashboardService.overview(), scope });
+    });
     return router;
   }
 }

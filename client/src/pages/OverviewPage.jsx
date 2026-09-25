@@ -56,19 +56,20 @@ export default function OverviewPage() {
   }, [handleError]);
 
   if (!dashboard) return <p className="text-[13px] text-on-surface-variant">Loading dashboard...</p>;
-  const { snapshot, risk, health, attentionRequired } = dashboard;
+  const { snapshot, risk, health, attentionRequired, scope } = dashboard;
+  const ownView = scope === 'own';
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
         eyebrow="Parcel Routing Control Room"
         title="Dispatch Overview"
-        description={<>Current routing rules (<span className="text-on-surface font-semibold">{snapshot.activePolicy}</span>) are active &mdash; live routing, approvals and risk in one view.</>}
+        description={<>{ownView ? 'Showing parcels you submitted' : 'Showing activity from all operators'} &mdash; current routing rules (<span className="text-on-surface font-semibold">{snapshot.activePolicy}</span>) are active.</>}
         actions={<Badge tone={HEALTH_TONE[health] || 'MEDIUM'}>{health}</Badge>}
       />
 
       <div className="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard bay="01" icon="package_2" tone="primary" label="Parcels Processed" value={snapshot.totalParcels} note="This session" />
+        <KpiCard bay="01" icon="package_2" tone="primary" label="Parcels Processed" value={snapshot.totalParcels} note={ownView ? (snapshot.totalParcels ? 'Submitted by you' : 'Route a parcel or upload a batch to start') : 'All operators'} />
         <KpiCard bay="02" icon="verified" tone="tertiary" label="Routed" value={snapshot.successful} note="Successfully dispatched" />
         <KpiCard bay="03" icon="pending_actions" tone="secondary" label="Awaiting Approval" value={snapshot.pendingApproval} note="In the approval queue" />
         <KpiCard bay="04" icon="warning" tone="error" label="Validation Errors" value={snapshot.validationErrors} note={snapshot.validationErrors > 0 ? 'Needs review' : 'None this session'} />

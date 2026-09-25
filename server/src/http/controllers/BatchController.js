@@ -13,12 +13,14 @@ export class BatchController {
   #secureBatchParser;
   #incidentDetectorService;
   #retryService;
+  #readModelsFor;
 
-  constructor({ batchService, secureBatchParser, incidentDetectorService, retryService }) {
+  constructor({ batchService, secureBatchParser, incidentDetectorService, retryService, readModelsFor }) {
     this.#batchService = batchService;
     this.#secureBatchParser = secureBatchParser;
     this.#incidentDetectorService = incidentDetectorService;
     this.#retryService = retryService;
+    this.#readModelsFor = readModelsFor;
   }
 
   buildRouter() {
@@ -41,17 +43,19 @@ export class BatchController {
     router.get('/batches', (req, res) => {
       const limit = Math.min(Number(req.query.limit) || 50, 200);
       const offset = Number(req.query.offset) || 0;
-      const all = [...this.#batchService.list()].reverse();
+      const all = [...this.#readModelsFor(req.identity).batches.list()].reverse();
       res.status(200).json({ total: all.length, limit, offset, batches: all.slice(offset, offset + limit) });
     });
 
     router.get('/batches/:id', (req, res, next) => {
-      const batch = this.#batchService.get(req.params.id);
+      const batch = this.#readModelsFor(req.identity).batches.get(req.params.id);
       if (!batch) return next(new NotFoundError('Batch was not found.'));
       res.status(200).json(batch);
     });
 
-    router.post('/batches/:id/retry', (req, res) => {
+    router.post('/batches/:id/retry', (req, res, next) => {
+      // Same 404 as a missing batch, so operators can't probe for other people's batch IDs.
+      if (!this.#readModelsFor(req.identity).batches.get(req.params.id)) return next(new NotFoundError('Batch was not found.'));
       const result = this.#retryService.retry(req.params.id, { actor: req.identity.actor, role: req.identity.role, correlationId: req.correlationId });
       res.status(200).json(result);
     });

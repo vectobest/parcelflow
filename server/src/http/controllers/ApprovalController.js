@@ -3,12 +3,16 @@ import { ValidationError } from '../../errors/index.js';
 
 export class ApprovalController {
   #approvalService;
-  constructor({ approvalService }) { this.#approvalService = approvalService; }
+  #readModelsFor;
+  constructor({ approvalService, readModelsFor }) {
+    this.#approvalService = approvalService;
+    this.#readModelsFor = readModelsFor;
+  }
 
   buildRouter() {
     const router = Router();
 
-    router.get('/approvals', (_req, res) => res.status(200).json(this.#approvalService.list()));
+    router.get('/approvals', (req, res) => res.status(200).json(this.#readModelsFor(req.identity).approvals.list()));
 
     router.post('/approvals/:id/:action', (req, res, next) => {
       const { action } = req.params;

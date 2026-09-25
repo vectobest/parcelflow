@@ -5,7 +5,11 @@ import { NotFoundError } from '../../errors/index.js';
 /** Single-parcel operations: an ad-hoc route check, and looking up every decision ever made for a given parcel ID (explainability + the Operations Assistant both use this). */
 export class ParcelController {
   #batchService;
-  constructor({ batchService }) { this.#batchService = batchService; }
+  #readModelsFor;
+  constructor({ batchService, readModelsFor }) {
+    this.#batchService = batchService;
+    this.#readModelsFor = readModelsFor;
+  }
 
   buildRouter() {
     const router = Router();
@@ -23,7 +27,7 @@ export class ParcelController {
     });
 
     router.get('/parcels/:id', (req, res, next) => {
-      const decisions = this.#batchService.list()
+      const decisions = this.#readModelsFor(req.identity).batches.list()
         .flatMap((batch) => batch.results.filter((r) => r.id === req.params.id).map((r) => ({ ...r, batchId: batch.batchId, policyVersion: batch.policyVersion })));
       if (!decisions.length) return next(new NotFoundError(`No decision was found for parcel ${req.params.id}.`));
       res.status(200).json(decisions);

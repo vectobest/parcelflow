@@ -126,6 +126,71 @@ test('an admin can pre-assign a role to an email that has not signed in yet, and
   assert.ok(!pendingAfter.body.some((p) => p.email === 'future@example.com'));
 });
 
+test('a new operator starts with an empty dashboard even when other operators have processed parcels', async () => {
+  const { app } = buildApp();
+  const busy = request.agent(app);
+  await busy.post('/api/auth/dev-login').send({ email: 'busy-op@example.com', role: 'OPERATOR' });
+  await busy.post('/api/batches').send({ parcels: [
+    { id: 'S-1', weight: 2, value: 40, destinationCountry: 'NL' },
+    { id: 'S-2', weight: 3, value: 1500, destinationCountry: 'DE' },
+    { id: 'S-3', weight: -1, value: 10, destinationCountry: 'NL' }
+  ], idempotencyKey: 'scope-busy-1' });
+
+  const fresh = request.agent(app);
+  await fresh.post('/api/auth/dev-login').send({ email: 'new-op@example.com', role: 'OPERATOR' });
+
+  const dashboard = await fresh.get('/api/dashboard');
+  assert.equal(dashboard.status, 200);
+  assert.equal(dashboard.body.scope, 'own');
+  assert.equal(dashboard.body.snapshot.totalParcels, 0);
+  assert.equal(dashboard.body.snapshot.pendingApproval, 0);
+  assert.equal(dashboard.body.snapshot.validationErrors, 0);
+  assert.deepEqual(dashboard.body.attentionRequired, []);
+
+  const batches = await fresh.get('/api/batches');
+  assert.equal(batches.body.total, 0);
+  const approvals = await fresh.get('/api/approvals');
+  assert.deepEqual(approvals.body, []);
+  const parcel = await fresh.get('/api/parcels/S-1');
+  assert.equal(parcel.status, 404);
+
+  const own = await busy.get('/api/dashboard');
+  assert.equal(own.body.snapshot.totalParcels, 3);
+});
+
+test('an operator cannot read or retry another operator\'s batch by ID', async () => {
+  const { app } = buildApp();
+  const owner = request.agent(app);
+  await owner.post('/api/auth/dev-login').send({ email: 'owner-op@example.com', role: 'OPERATOR' });
+  const created = await owner.post('/api/batches').send({ parcels: [{ id: 'R-1', weight: -1, value: 10, destinationCountry: 'NL' }], idempotencyKey: 'scope-owner-1' });
+  const batchId = created.body.batchId;
+
+  const other = request.agent(app);
+  await other.post('/api/auth/dev-login').send({ email: 'other-op@example.com', role: 'OPERATOR' });
+  assert.equal((await other.get(`/api/batches/${batchId}`)).status, 404);
+  assert.equal((await other.post(`/api/batches/${batchId}/retry`)).status, 404);
+  assert.equal((await owner.get(`/api/batches/${batchId}`)).status, 200);
+});
+
+test('reviewers and admins still see every operator\'s parcels, so approvals keep working', async () => {
+  const { app } = buildApp();
+  const operator = request.agent(app);
+  await operator.post('/api/auth/dev-login').send({ email: 'queue-op@example.com', role: 'OPERATOR' });
+  await operator.post('/api/batches').send({ parcels: [{ id: 'Q-1', weight: 3, value: 1500, destinationCountry: 'DE' }], idempotencyKey: 'scope-queue-1' });
+
+  const reviewer = request.agent(app);
+  await reviewer.post('/api/auth/dev-login').send({ email: 'queue-rev@example.com', role: 'REVIEWER' });
+  const dashboard = await reviewer.get('/api/dashboard');
+  assert.equal(dashboard.body.scope, 'all');
+  assert.equal(dashboard.body.snapshot.totalParcels, 1);
+  const approvals = await reviewer.get('/api/approvals');
+  assert.equal(approvals.body.length, 1);
+
+  const admin = request.agent(app);
+  await admin.post('/api/auth/dev-login').send({ email: 'queue-admin@example.com', role: 'ADMIN' });
+  assert.equal((await admin.get('/api/dashboard')).body.snapshot.totalParcels, 1);
+});
+
 test('pre-assigning a role is admin-only and rejects an already-signed-in email', async () => {
   const { app } = buildApp();
   const operator = request.agent(app);

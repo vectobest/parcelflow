@@ -33,6 +33,7 @@ import { OperationsAssistantService } from './assistant/OperationsAssistantServi
 import { AiOperationsAssistantService } from './assistant/AiOperationsAssistantService.js';
 import { AiRiskNarrator } from './intelligence/AiRiskNarrator.js';
 import { GeminiClient } from './ai/GeminiClient.js';
+import { ownApprovals, ownBatches, ownIncidents } from './scoping/ownOperations.js';
 
 import { ChaosDrillService } from './drills/ChaosDrillService.js';
 import { SecurityDrillService } from './drills/SecurityDrillService.js';
@@ -85,24 +86,43 @@ export function createContainer({ config = new Config(), clock = () => new Date(
   });
   const secureBatchParser = new SecureBatchParser({ maxBytes: config.maxUploadBytes, maxRecords: config.maxBatchSize });
 
-  const comparisonService = new DecisionComparisonService({ policyService, batchService, routingEngine });
   const policyBlastRadiusService = new PolicyBlastRadiusService({ policyService, batchService, routingEngine });
-
-  const riskService = new RiskService({ batchService, approvalService });
-  const failureDnaService = new FailureDnaService({ batchService });
-  const incidentDetectorService = new IncidentDetectorService({ repository: new InMemoryIncidentRepository(), batchService, failureDnaService, auditService, clock });
-
-  const dashboardService = new DashboardService({ batchService, policyService, approvalService, riskService, incidentDetectorService });
-  const digitalTwinService = new DigitalTwinService({ dashboardService });
+  const incidentDetectorService = new IncidentDetectorService({ repository: new InMemoryIncidentRepository(), batchService, failureDnaService: new FailureDnaService({ batchService }), auditService, clock });
   const retryService = new RetryService({ batchRepository, routingEngine, policyService, approvalService, auditService, authorizationService, clock, maxRetries: config.maxRetries });
-  const systemHistoryService = new SystemHistoryService({ policyService, batchService, approvalService, incidentDetectorService });
-
-  const heuristicAssistant = new OperationsAssistantService({ policyService, batchService, riskService, incidentDetectorService, digitalTwinService });
   const gemini = config.aiEnabled ? new GeminiClient({ apiKey: config.geminiApiKey, model: config.geminiModel }) : null;
-  const operationsAssistantService = gemini
-    ? new AiOperationsAssistantService({ gemini, policyService, batchService, incidentDetectorService, riskService, failureDnaService, digitalTwinService, fallback: heuristicAssistant })
-    : heuristicAssistant;
-  const riskNarrator = gemini ? new AiRiskNarrator({ gemini, riskService }) : { assess: () => ({ ...riskService.assess(), source: 'heuristic' }) };
+
+  // Every read-side service, built over whichever batches/approvals/incidents the viewer is allowed to see.
+  function buildReadModels({ scope, batches, approvals, incidents }) {
+    const comparisonService = new DecisionComparisonService({ policyService, batchService: batches, routingEngine });
+    const riskService = new RiskService({ batchService: batches, approvalService: approvals });
+    const failureDnaService = new FailureDnaService({ batchService: batches });
+    const dashboardService = new DashboardService({ batchService: batches, policyService, approvalService: approvals, riskService, incidentDetectorService: incidents });
+    const digitalTwinService = new DigitalTwinService({ dashboardService });
+    const systemHistoryService = new SystemHistoryService({ policyService, batchService: batches, approvalService: approvals, incidentDetectorService: incidents });
+    const heuristicAssistant = new OperationsAssistantService({ policyService, batchService: batches, riskService, incidentDetectorService: incidents, digitalTwinService });
+    const operationsAssistantService = gemini
+      ? new AiOperationsAssistantService({ gemini, policyService, batchService: batches, incidentDetectorService: incidents, riskService, failureDnaService, digitalTwinService, fallback: heuristicAssistant })
+      : heuristicAssistant;
+    const riskNarrator = gemini ? new AiRiskNarrator({ gemini, riskService }) : { assess: () => ({ ...riskService.assess(), source: 'heuristic' }) };
+    return {
+      scope, batches, approvals, incidents,
+      comparisonService, riskService, failureDnaService, dashboardService, digitalTwinService,
+      systemHistoryService, heuristicAssistant, operationsAssistantService, riskNarrator
+    };
+  }
+
+  const allOperations = buildReadModels({ scope: 'all', batches: batchService, approvals: approvalService, incidents: incidentDetectorService });
+
+  function readModelsFor(identity) {
+    if (authorizationService.can(identity.role, 'viewAllOperations')) return allOperations;
+    const batches = ownBatches(batchService, identity.actor);
+    return buildReadModels({ scope: 'own', batches, approvals: ownApprovals(approvalService, batches), incidents: ownIncidents(incidentDetectorService, batches) });
+  }
+
+  const {
+    comparisonService, riskService, failureDnaService, dashboardService, digitalTwinService,
+    systemHistoryService, heuristicAssistant, operationsAssistantService, riskNarrator
+  } = allOperations;
 
   const chaosDrillService = new ChaosDrillService({ incidentDetectorService, auditService, clock });
   const securityDrillService = new SecurityDrillService({ authorizationService, authenticationService, auditService, config });
@@ -114,16 +134,16 @@ export function createContainer({ config = new Config(), clock = () => new Date(
 
   const healthController = new HealthController({ policyService, config });
   const authController = new AuthController({ passport, config, userStore, authorizationService, auditService });
-  const dashboardController = new DashboardController({ dashboardService });
-  const parcelController = new ParcelController({ batchService });
-  const batchController = new BatchController({ batchService, secureBatchParser, incidentDetectorService, retryService });
-  const approvalController = new ApprovalController({ approvalService });
+  const dashboardController = new DashboardController({ readModelsFor });
+  const parcelController = new ParcelController({ batchService, readModelsFor });
+  const batchController = new BatchController({ batchService, secureBatchParser, incidentDetectorService, retryService, readModelsFor });
+  const approvalController = new ApprovalController({ approvalService, readModelsFor });
   const policyController = new PolicyController({ policyService, auditService, authorizationService, ruleConflictDetector, policyBlastRadiusService });
-  const analysisController = new AnalysisController({ comparisonService });
-  const intelligenceController = new IntelligenceController({ riskNarrator, incidentDetectorService, failureDnaService, operationsAssistantService, auditService });
-  const simulationController = new SimulationController({ digitalTwinService });
+  const analysisController = new AnalysisController({ readModelsFor });
+  const intelligenceController = new IntelligenceController({ incidentDetectorService, auditService, readModelsFor });
+  const simulationController = new SimulationController({ readModelsFor });
   const drillController = new DrillController({ chaosDrillService, securityDrillService, authorizationService });
-  const historyController = new HistoryController({ systemHistoryService });
+  const historyController = new HistoryController({ readModelsFor });
   const auditController = new AuditController({ auditService, authorizationService });
 
   return {
@@ -133,7 +153,7 @@ export function createContainer({ config = new Config(), clock = () => new Date(
     approvalService, batchService, secureBatchParser,
     comparisonService, riskService, failureDnaService, incidentDetectorService,
     dashboardService, digitalTwinService, retryService, systemHistoryService,
-    heuristicAssistant, operationsAssistantService, riskNarrator, gemini,
+    heuristicAssistant, operationsAssistantService, riskNarrator, gemini, readModelsFor,
     chaosDrillService, securityDrillService,
     userStore, passport, requestGate,
     healthController, authController, dashboardController, parcelController, batchController,
