@@ -13,7 +13,7 @@ export class HealthController {
   buildRouter() {
     const router = Router();
     router.get('/health', (_req, res) => {
-      res.status(200).json({ status: 'ok', uptimeSeconds: Math.floor((Date.now() - this.#startedAt) / 1000), activePolicy: this.#policyService.activeVersion(), oauthEnabled: this.#config.oauthEnabled, aiEnabled: this.#config.aiEnabled });
+      res.status(200).json({ status: 'ok', uptimeSeconds: Math.floor((Date.now() - this.#startedAt) / 1000), activePolicy: this.#policyService.activeVersion(), oauthEnabled: this.#config.oauthEnabled, aiEnabled: this.#config.aiEnabled, persistenceEnabled: this.#config.persistenceEnabled });
     });
     router.get('/health/ready', (_req, res) => res.status(200).json({ ready: true }));
     return router;

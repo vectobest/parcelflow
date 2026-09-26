@@ -23,6 +23,10 @@ export class Config {
     this.geminiModel = env.GEMINI_MODEL || 'gemini-3.6-flash';
     this.aiEnabled = Boolean(this.geminiApiKey);
 
+    this.mongoUri = env.MONGODB_URI || '';
+    this.mongoDbName = env.MONGODB_DB_NAME || 'parcelflow';
+    this.persistenceEnabled = Boolean(this.mongoUri);
+
     this.maxUploadBytes = Number(env.MAX_UPLOAD_BYTES || 5 * 1024 * 1024);
     this.maxBatchSize = Number(env.MAX_BATCH_SIZE || 5000);
     this.maxRetries = Number(env.MAX_RETRIES || 3);

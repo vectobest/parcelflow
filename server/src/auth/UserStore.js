@@ -10,16 +10,24 @@ import { DEFAULT_ROLE } from './roles.js';
  * which is the explicit trade-off of staying in-memory.
  */
 export class UserStore {
-  #users = new Map();
-  #pendingRoles = new Map();
+  #users;
+  #pendingRoles;
   #adminEmails;
   #reviewerEmails;
   #clock;
 
-  constructor({ adminEmails = [], reviewerEmails = [], clock = () => new Date() } = {}) {
+  /**
+   * `users`/`pendingRoles` default to a plain Map (in-memory, the original
+   * behaviour) but accept anything with the same get/set/has/delete/values
+   * shape -- a MongoBackedMap, in particular (see server/src/db), so this
+   * class never needs to know whether it's backed by a database.
+   */
+  constructor({ adminEmails = [], reviewerEmails = [], clock = () => new Date(), users = new Map(), pendingRoles = new Map() } = {}) {
     this.#adminEmails = new Set(adminEmails);
     this.#reviewerEmails = new Set(reviewerEmails);
     this.#clock = clock;
+    this.#users = users;
+    this.#pendingRoles = pendingRoles;
   }
 
   findOrCreate({ email, name, avatarUrl, provider }) {

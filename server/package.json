@@ -18,6 +18,7 @@
     "express-session": "^1.18.1",
     "fast-xml-parser": "^5.2.5",
     "helmet": "^8.3.0",
+    "mongodb": "^7.6.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0"
   },

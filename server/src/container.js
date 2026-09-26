@@ -66,20 +66,27 @@ import { AuditController } from './http/controllers/AuditController.js';
  * Inversion), so this function is also the one place a test needs to
  * touch to replace a real dependency with a fake -- see server/tests.
  */
-export function createContainer({ config = new Config(), clock = () => new Date(), initialPolicy = DEFAULT_POLICY } = {}) {
+/**
+ * `repositories` lets a caller hand in already-connected, already-hydrated
+ * database-backed repositories (see server/src/db/mongoRepositories.js and
+ * server.js) in place of any of the in-memory defaults below. Every test in
+ * server/tests calls this with no `repositories`, so they are entirely
+ * unaffected and keep running against plain in-memory storage.
+ */
+export function createContainer({ config = new Config(), clock = () => new Date(), initialPolicy = DEFAULT_POLICY, repositories = {} } = {}) {
   const logger = new Logger({ name: 'parcelflow-server', clock });
   const routingEngine = new RoutingEngine();
 
-  const policyService = new PolicyService({ repository: new InMemoryPolicyRepository(), clock }).bootstrap(initialPolicy);
+  const policyService = new PolicyService({ repository: repositories.policyRepository || new InMemoryPolicyRepository(), clock }).bootstrap(initialPolicy);
   const ruleConflictDetector = new RuleConflictDetector();
 
-  const auditService = new AuditService({ repository: new InMemoryAuditRepository(), clock });
+  const auditService = new AuditService({ repository: repositories.auditRepository || new InMemoryAuditRepository(), clock });
   const authorizationService = new AuthorizationService();
   const authenticationService = new AuthenticationService({ tokens: config.serviceTokens });
 
-  const approvalService = new ApprovalService({ repository: new InMemoryApprovalRepository(), routingEngine, policyService, auditService, authorizationService, clock });
+  const approvalService = new ApprovalService({ repository: repositories.approvalRepository || new InMemoryApprovalRepository(), routingEngine, policyService, auditService, authorizationService, clock });
 
-  const batchRepository = new InMemoryBatchRepository();
+  const batchRepository = repositories.batchRepository || new InMemoryBatchRepository();
   const batchService = new BatchService({
     repository: batchRepository, routingEngine, policyService, approvalService, auditService, authorizationService,
     idempotencyStore: new IdempotencyStore(), clock, maxBatchSize: config.maxBatchSize
@@ -87,7 +94,7 @@ export function createContainer({ config = new Config(), clock = () => new Date(
   const secureBatchParser = new SecureBatchParser({ maxBytes: config.maxUploadBytes, maxRecords: config.maxBatchSize });
 
   const policyBlastRadiusService = new PolicyBlastRadiusService({ policyService, batchService, routingEngine });
-  const incidentDetectorService = new IncidentDetectorService({ repository: new InMemoryIncidentRepository(), batchService, failureDnaService: new FailureDnaService({ batchService }), auditService, clock });
+  const incidentDetectorService = new IncidentDetectorService({ repository: repositories.incidentRepository || new InMemoryIncidentRepository(), batchService, failureDnaService: new FailureDnaService({ batchService }), auditService, clock });
   const retryService = new RetryService({ batchRepository, routingEngine, policyService, approvalService, auditService, authorizationService, clock, maxRetries: config.maxRetries });
   const gemini = config.aiEnabled ? new GeminiClient({ apiKey: config.geminiApiKey, model: config.geminiModel }) : null;
   // Shared across every per-viewer read model so identical risk evidence is only ever narrated once.
@@ -129,7 +136,10 @@ export function createContainer({ config = new Config(), clock = () => new Date(
   const chaosDrillService = new ChaosDrillService({ incidentDetectorService, auditService, clock });
   const securityDrillService = new SecurityDrillService({ authorizationService, authenticationService, auditService, config });
 
-  const userStore = new UserStore({ adminEmails: config.adminEmails, reviewerEmails: config.reviewerEmails, clock });
+  const userStore = new UserStore({
+    adminEmails: config.adminEmails, reviewerEmails: config.reviewerEmails, clock,
+    users: repositories.userStoreMaps?.users, pendingRoles: repositories.userStoreMaps?.pendingRoles
+  });
   const passport = configurePassport({ config, userStore });
 
   const requestGate = new AsyncGate({ limit: config.apiConcurrency });

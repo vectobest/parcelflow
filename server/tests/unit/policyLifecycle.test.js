@@ -65,3 +65,16 @@ test('blast radius counts real decision changes across historical parcels', () =
   assert.equal(result.changed[0].from, 'Regular Department');
   assert.equal(result.changed[0].to, 'Heavy Department');
 });
+
+test('createContainer() uses an injected repository in place of its in-memory default', () => {
+  const injectedPolicies = new Map();
+  const policyRepository = {
+    get: (v) => injectedPolicies.get(v),
+    list: () => [...injectedPolicies.values()],
+    save: (p) => { injectedPolicies.set(p.version, p); return p; },
+    has: (v) => injectedPolicies.has(v)
+  };
+  const { policyService } = createContainer({ repositories: { policyRepository } });
+  assert.equal(policyService.activeVersion(), 'v1');
+  assert.ok(injectedPolicies.has('v1'), 'the bootstrap policy was written through the injected repository, not a private in-memory one');
+});

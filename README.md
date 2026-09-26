@@ -453,7 +453,7 @@ This project follows the same habits. The boundary tests in `server/tests/unit/r
 | Routing as a list of small rules run in order | New rules can be added without touching existing ones | Rule order matters and must be tested |
 | Versioned policies that can't be edited once live | Every past decision can still be explained; rollback is easy | Every small change needs a new version |
 | Rule limits stored in the policy, not in code | Business users can change limits without a release | New kinds of conditions still need a new rule in code |
-| No database; data kept in memory | Simple to run and review; storage sits behind small interfaces so a database can be added later | Data is lost when the server restarts |
+| In-memory by default, MongoDB optional | Simple to run and review with no setup; add `MONGODB_URI` for real persistence with no code changes | Without it, data is lost when the server restarts |
 | Google sign-in, with a local sign-in only for development | Real security in production; easy to try locally | Needs a Google project to be set up for real use |
 | Risk detection uses simple, visible rules, not machine learning | Easy to understand and check; honest about limited data | Less clever than a trained model |
 | AI is optional and can only explain, never act | The app never depends on AI and can't make unsafe changes | AI answers are limited to what the built-in tools can look up |
@@ -537,7 +537,7 @@ I can walk through any part of the system live:
 
 ## Known limitations
 
-- **No database.** All data is lost when the server restarts. Adding MongoDB would only mean replacing the storage classes.
+- **No database by default.** Data is lost on restart unless `MONGODB_URI` is set (see [ADR-010](docs/decisions/ADR-010-mongodb-persistence.md)). With it, everything survives a restart, but two server processes sharing one database still keep separate copies in memory and don't see each other's writes live -- fine for one server, a real constraint before running more than one.
 - **Single server.** Sessions and rate limits live in one server's memory. Running several servers needs a shared store such as Redis.
 - **Short memory for risk detection.** Risk and incident detection only use data since the last restart.
 - **Simple capacity forecast.** The Digital Twin uses a straight-line estimate, not a detailed model.
