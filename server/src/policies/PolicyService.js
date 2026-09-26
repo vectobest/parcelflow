@@ -25,14 +25,36 @@ export class PolicyService {
     this.#clock = clock;
   }
 
-  /** Seeds the store with the initial, already-active policy. Throws if it is invalid. */
+  /**
+   * Seeds the store with the initial, already-active policy -- but only on a genuinely empty
+   * store (a fresh in-memory run, or a brand-new database). Called on every boot regardless of
+   * whether the repository already has history behind it (a persistent database, reconnected
+   * after a restart); it must never re-seed and overwrite real data with the hardcoded default,
+   * which would silently force the wrong version back to active. When history already exists,
+   * the real active version is recovered from the data itself -- whichever policy's own `state`
+   * is ACTIVE, most-recently-activated first if more than one is (self-healing any duplicate
+   * left over from before that was itself a bug, not a feature -- see docs/decisions/ADR-002).
+   */
   bootstrap(initialPolicyAttrs) {
-    const now = this.#clock().toISOString();
-    const initial = new Policy({ ...initialPolicyAttrs, state: POLICY_STATES.ACTIVE, createdBy: 'system', createdAt: now, activatedAt: now });
-    const validation = Policy.validate(initial);
-    if (!validation.valid) throw new ValidationError(validation.errors.join(' '));
-    this.#repository.save(initial);
-    this.#activeVersion = initial.version;
+    const existing = this.#repository.list();
+    if (existing.length === 0) {
+      const now = this.#clock().toISOString();
+      const initial = new Policy({ ...initialPolicyAttrs, state: POLICY_STATES.ACTIVE, createdBy: 'system', createdAt: now, activatedAt: now });
+      const validation = Policy.validate(initial);
+      if (!validation.valid) throw new ValidationError(validation.errors.join(' '));
+      this.#repository.save(initial);
+      this.#activeVersion = initial.version;
+      return this;
+    }
+
+    const activeCandidates = existing.filter((policy) => policy.state === POLICY_STATES.ACTIVE);
+    const winner = [...activeCandidates].sort((a, b) => new Date(b.activatedAt || 0) - new Date(a.activatedAt || 0))[0];
+    if (winner) {
+      this.#activeVersion = winner.version;
+      for (const stale of activeCandidates) {
+        if (stale.version !== winner.version) this.#repository.save(stale.withState(POLICY_STATES.ROLLED_BACK, this.#clock));
+      }
+    }
     return this;
   }
 

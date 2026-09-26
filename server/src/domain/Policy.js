@@ -6,6 +6,13 @@ export const POLICY_STATES = Object.freeze({
   ROLLED_BACK: 'ROLLED_BACK'
 });
 
+const STATE_TIMESTAMP_FIELD = Object.freeze({
+  [POLICY_STATES.VALIDATED]: 'validatedAt',
+  [POLICY_STATES.APPROVED]: 'approvedAt',
+  [POLICY_STATES.ACTIVE]: 'activatedAt',
+  [POLICY_STATES.ROLLED_BACK]: 'rolledBackAt'
+});
+
 /**
  * Policy is an immutable entity: every state transition returns a *new*
  * Policy instead of mutating the current one. That makes "active policies
@@ -65,10 +72,16 @@ export class Policy {
 
   get isValid() { return Policy.validate(this).valid; }
 
-  /** Returns a new Policy in `state`, stamping the matching `<state>At` timestamp. */
+  /**
+   * Returns a new Policy in `state`, stamping the matching `<state>At` field. An explicit map,
+   * not a `${state.toLowerCase()}At` computation: ACTIVE's field is `activatedAt` (adjective vs.
+   * past participle) and ROLLED_BACK's is `rolledBackAt` (no underscore) -- neither matches the
+   * naive transform, which silently stamped a throwaway `activeAt`/`rolled_backAt` key instead
+   * that Policy's constructor doesn't recognise and drops, leaving the real field null forever.
+   */
   withState(state, clock = () => new Date()) {
-    const timestampField = `${state.toLowerCase()}At`;
-    return new Policy({ ...this, departments: { ...this.departments }, state, [timestampField]: clock().toISOString() });
+    const timestampField = STATE_TIMESTAMP_FIELD[state];
+    return new Policy({ ...this, departments: { ...this.departments }, state, ...(timestampField ? { [timestampField]: clock().toISOString() } : {}) });
   }
 
   toJSON() {

@@ -1,5 +1,6 @@
 import { MongoClient } from 'mongodb';
 import { MongoBackedMap } from './MongoBackedMap.js';
+import { Policy } from '../domain/Policy.js';
 import { PolicyRepository } from '../policies/PolicyRepository.js';
 import { AuditRepository } from '../audit/AuditRepository.js';
 import { ApprovalRepository } from '../approvals/ApprovalRepository.js';
@@ -11,12 +12,24 @@ import { BatchRepository } from '../batches/BatchRepository.js';
  * so PolicyService, AuditService, ApprovalService, BatchService and
  * IncidentDetectorService never know or care whether they were handed one of
  * these or the plain in-memory version.
+ *
+ * One asymmetry worth knowing: a value freshly written this process (via `save`) is
+ * whatever object the caller passed in, but a value loaded by `hydrate()` at boot is a
+ * plain object rebuilt from a Mongo document, never the original class instance. Batches,
+ * approvals, incidents and users are already plain object literals everywhere in this
+ * codebase (nothing ever calls an instance method on one after fetching it), so that
+ * distinction is harmless for them. Policy is the one exception -- PolicyService calls
+ * `.withState()` on whatever a repository hands back -- so MongoPolicyRepository
+ * rebuilds a real, frozen Policy on every read, whether the underlying value came from
+ * this process's own `save()` or from a cold hydrate; doing it unconditionally, rather
+ * than only at hydration time, means it can never drift out of sync with `save()` again.
  */
-class MongoPolicyRepository extends PolicyRepository {
+export class MongoPolicyRepository extends PolicyRepository {
   #map;
   constructor(map) { super(); this.#map = map; }
-  get(version) { return this.#map.get(version); }
-  list() { return [...this.#map.values()]; }
+  #toPolicy(value) { return value === undefined ? undefined : new Policy(value); }
+  get(version) { return this.#toPolicy(this.#map.get(version)); }
+  list() { return [...this.#map.values()].map((value) => this.#toPolicy(value)); }
   save(policy) { this.#map.set(policy.version, policy); return policy; }
   has(version) { return this.#map.has(version); }
 }

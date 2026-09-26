@@ -112,3 +112,33 @@ test('createContainer() uses an injected repository in place of its in-memory de
   assert.equal(policyService.activeVersion(), 'v1');
   assert.ok(injectedPolicies.has('v1'), 'the bootstrap policy was written through the injected repository, not a private in-memory one');
 });
+
+test('withState stamps the real timestamp field for every state, not a computed near-miss', () => {
+  const { policyService } = createContainer();
+  policyService.createDraft({ ...DEFAULT_POLICY, version: 'v2', regularWeightLimit: 8 });
+  const validated = policyService.validateAndMark('v2').policy;
+  assert.ok(validated.validatedAt);
+  const approved = policyService.approve('v2');
+  assert.ok(approved.approvedAt);
+  const activated = policyService.activate('v2');
+  assert.ok(activated.activatedAt, 'ACTIVE must stamp activatedAt, not a throwaway "activeAt"');
+  const rolledBack = policyService.rollback('v2');
+  assert.ok(rolledBack.rolledBackAt, 'ROLLED_BACK must stamp rolledBackAt, not a throwaway "rolled_backAt"');
+});
+
+test('bootstrap() never re-seeds or overwrites a repository that already has history', () => {
+  const injected = new Map();
+  const policyRepository = {
+    get: (v) => injected.get(v),
+    list: () => [...injected.values()],
+    save: (p) => { injected.set(p.version, p); return p; },
+    has: (v) => injected.has(v)
+  };
+  // Pre-populate as if a persistent store had survived a restart: v1 rolled back, v2 genuinely active.
+  policyRepository.save({ version: 'v1', mailWeightLimit: 1, regularWeightLimit: 10, insuranceValueThreshold: 1000, departments: {}, state: POLICY_STATES.ROLLED_BACK, activatedAt: '2026-01-01T00:00:00.000Z', rolledBackAt: '2026-01-02T00:00:00.000Z' });
+  policyRepository.save({ version: 'v2', mailWeightLimit: 2, regularWeightLimit: 8, insuranceValueThreshold: 1500, departments: { mail: 'M', regular: 'R', heavy: 'H' }, state: POLICY_STATES.ACTIVE, activatedAt: '2026-01-02T00:00:00.000Z' });
+
+  const { policyService } = createContainer({ repositories: { policyRepository } });
+  assert.equal(policyService.activeVersion(), 'v2', 'bootstrap must recover the real active version instead of forcing v1 active');
+  assert.equal(policyService.get('v1').state, POLICY_STATES.ROLLED_BACK, 'bootstrap must not overwrite an existing v1 with a fresh, forced-active copy');
+});
