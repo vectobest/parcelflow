@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Icon from '../components/Icon.jsx';
 import { api } from '../api/client.js';
 import { useApiError } from '../hooks/useApiError.js';
@@ -8,7 +8,7 @@ import Badge from '../components/Badge.jsx';
 import Panel from '../components/Panel.jsx';
 import Button from '../components/Button.jsx';
 import PageHeader from '../components/PageHeader.jsx';
-import { Field, Input } from '../components/Field.jsx';
+import { Field, Input, Select } from '../components/Field.jsx';
 import { tableWrap, table, thead, th, tr, td } from '../components/table.js';
 
 const STATUS_TONE = { routed: 'routed', pending: 'pending', error: 'error', rejected: 'rejected' };
@@ -45,16 +45,29 @@ export default function IntakePage() {
   const [stage, setStage] = useState(null);
   const [chosen, setChosen] = useState(null);
   const [dragging, setDragging] = useState(false);
+  const [activePolicies, setActivePolicies] = useState([]);
+  const [policyVersion, setPolicyVersion] = useState('');
   const fileRef = useRef(null);
   const handleError = useApiError();
   const toast = useToast();
+
+  // More than one set of rules can be active at once; if so, the operator picks which one a
+  // parcel or batch is routed under. With only one active, there's nothing to choose, so it's
+  // used automatically and no picker is shown.
+  useEffect(() => {
+    api('/policies').then((data) => {
+      const active = data.activePolicies || (data.active ? [data.active] : []);
+      setActivePolicies(active);
+      setPolicyVersion((current) => current || active[0]?.version || '');
+    }).catch((error) => handleError(error, 'Loading routing rules'));
+  }, [handleError]);
 
   async function routeParcel(event) {
     event.preventDefault();
     setBusy(true);
     setStage('checking');
     try {
-      const result = await api('/parcels/route', { body: { parcel: { id: form.id || undefined, weight: Number(form.weight), value: Number(form.value), destinationCountry: form.destinationCountry } } });
+      const result = await api('/parcels/route', { body: { parcel: { id: form.id || undefined, weight: Number(form.weight), value: Number(form.value), destinationCountry: form.destinationCountry }, policyVersion: policyVersion || undefined } });
       setBatch(result);
       toast('Parcel routed.');
     } catch (error) {
@@ -69,7 +82,7 @@ export default function IntakePage() {
     setBusy(true);
     setStage('checking');
     try {
-      const result = await api('/batches', { body: { parcels, idempotencyKey: `${label}-${Date.now()}` } });
+      const result = await api('/batches', { body: { parcels, idempotencyKey: `${label}-${Date.now()}`, policyVersion: policyVersion || undefined } });
       setBatch(result);
       toast(result.deduplicated ? 'This batch was already processed.' : `Batch routed: ${result.results.length} parcels under rules ${result.policyVersion}.`, result.state === 'PARTIALLY_FAILED' ? 'warning' : '');
     } catch (error) {
@@ -109,7 +122,7 @@ export default function IntakePage() {
     reader.onload = async () => {
       setStage('checking');
       try {
-        const result = await api('/batches/upload', { body: { content: reader.result, format, idempotencyKey: `upload-${Date.now()}` } });
+        const result = await api('/batches/upload', { body: { content: reader.result, format, idempotencyKey: `upload-${Date.now()}`, policyVersion: policyVersion || undefined } });
         setBatch(result);
         toast(`Uploaded ${file.name}: ${result.results.length} parcels routed.`, result.state === 'PARTIALLY_FAILED' ? 'warning' : '');
       } catch (error) {
@@ -126,6 +139,18 @@ export default function IntakePage() {
   return (
     <div className="flex flex-col gap-space-sm">
       <PageHeader eyebrow="Step 1" title="Intake" description="Route one parcel, upload a batch file, or generate a sample." />
+
+      {activePolicies.length > 1 && (
+        <Panel icon="rule" title="Routing rules">
+          <Field label="Route under" htmlFor="policy-version">
+            <Select id="policy-version" value={policyVersion} onChange={(e) => setPolicyVersion(e.target.value)}>
+              {activePolicies.map((p) => (
+                <option key={p.version} value={p.version}>{p.version} — mail ≤{p.mailWeightLimit}kg, regular ≤{p.regularWeightLimit}kg, insurance &gt;€{p.insuranceValueThreshold}</option>
+              ))}
+            </Select>
+          </Field>
+        </Panel>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
         <Panel icon="local_shipping" title="Single Parcel">

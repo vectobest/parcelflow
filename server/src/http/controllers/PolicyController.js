@@ -29,7 +29,10 @@ export class PolicyController {
       // already routing their parcels, not one an admin might still be drafting or has since retired.
       const isAdmin = this.#authorizationService.can(req.identity.role, 'managePolicy');
       const policies = isAdmin ? this.#policyService.list() : this.#policyService.list().filter((p) => p.state === POLICY_STATES.ACTIVE);
-      res.status(200).json({ active: this.#policyService.getActive(), policies });
+      // `active` is a single convenience default (the most recently activated policy), kept for any
+      // caller that just wants one to route under without asking. `activePolicies` is every version
+      // currently live -- more than one can be, by design -- for an operator to choose between.
+      res.status(200).json({ active: this.#policyService.getActive(), activePolicies: this.#policyService.listActive(), policies });
     });
 
     router.post('/policies', (req, res) => {

@@ -26,48 +26,63 @@ test('active policies are immutable; the only way to change one is a new version
   assert.throws(() => policyService.activate('v1'), /immutable/);
 });
 
-test('rollback restores the previous active policy', () => {
-  const { policyService } = createContainer();
-  policyService.createDraft({ ...DEFAULT_POLICY, version: 'v2', regularWeightLimit: 8 });
-  policyService.validateAndMark('v2');
-  policyService.approve('v2');
-  policyService.activate('v2');
-  policyService.rollback('v2');
-  assert.equal(policyService.activeVersion(), 'v1');
-});
+function activateVersion(policyService, version, overrides = {}) {
+  policyService.createDraft({ ...DEFAULT_POLICY, ...overrides, version });
+  policyService.validateAndMark(version);
+  policyService.approve(version);
+  return policyService.activate(version);
+}
 
-test('activating a new version demotes whatever was active a moment before it, so exactly one policy is ever ACTIVE', () => {
+test('more than one policy can be active at the same time: activating a new one never touches another', () => {
   const { policyService } = createContainer();
-  policyService.createDraft({ ...DEFAULT_POLICY, version: 'v2', regularWeightLimit: 8 });
-  policyService.validateAndMark('v2');
-  policyService.approve('v2');
-  policyService.activate('v2');
-  assert.equal(policyService.get('v1').state, POLICY_STATES.ROLLED_BACK);
+  activateVersion(policyService, 'v2', { regularWeightLimit: 8 });
+  assert.equal(policyService.get('v1').state, POLICY_STATES.ACTIVE, 'v1 must still be active -- activating v2 is not a rollback of v1');
   assert.equal(policyService.get('v2').state, POLICY_STATES.ACTIVE);
+  assert.deepEqual(policyService.listActive().map((p) => p.version).sort(), ['v1', 'v2']);
 });
 
-test('an admin can reactivate a specific, previously rolled-back version directly, not just the one rollback would auto-select', () => {
+test('rolling back one active policy never activates or otherwise touches any other', () => {
   const { policyService } = createContainer();
-  for (const version of ['v2', 'v3']) {
-    policyService.createDraft({ ...DEFAULT_POLICY, version, regularWeightLimit: 8 });
-    policyService.validateAndMark(version);
-    policyService.approve(version);
-    policyService.activate(version);
-  }
-  // v1 -> v2 -> v3: v1 and v2 are both ROLLED_BACK now, v3 is active. Reactivate v1 specifically,
-  // not v2 (which a plain rollback of v3 would have picked automatically).
-  assert.equal(policyService.get('v1').state, POLICY_STATES.ROLLED_BACK);
+  activateVersion(policyService, 'v2', { regularWeightLimit: 8 });
+  policyService.rollback('v2');
+  assert.equal(policyService.get('v1').state, POLICY_STATES.ACTIVE, 'rolling back v2 must not reactivate or re-touch v1');
+  assert.equal(policyService.get('v2').state, POLICY_STATES.ROLLED_BACK);
+  assert.deepEqual(policyService.listActive().map((p) => p.version), ['v1']);
+});
+
+test('the single-default pointer moves to the next-newest active policy after a rollback, or to none if it was the only one', () => {
+  const { policyService } = createContainer();
+  activateVersion(policyService, 'v2', { regularWeightLimit: 8 });
+  assert.equal(policyService.activeVersion(), 'v2', 'the default pointer is the most recently activated one');
+  policyService.rollback('v2');
+  assert.equal(policyService.activeVersion(), 'v1', 'v1 is still active, so it becomes the new default');
+  policyService.rollback('v1');
+  assert.equal(policyService.activeVersion(), null, 'nothing is active any more');
+});
+
+test('an admin can reactivate a specific, previously rolled-back version directly', () => {
+  const { policyService } = createContainer();
+  activateVersion(policyService, 'v2', { regularWeightLimit: 8 });
+  activateVersion(policyService, 'v3', { regularWeightLimit: 8 });
+  policyService.rollback('v1');
+  policyService.rollback('v2');
+  // v1 and v2 are both rolled back now, v3 is active. Reactivate v1 specifically.
   const reactivated = policyService.activate('v1');
   assert.equal(reactivated.state, POLICY_STATES.ACTIVE);
-  assert.equal(policyService.activeVersion(), 'v1');
-  assert.equal(policyService.get('v3').state, POLICY_STATES.ROLLED_BACK);
-  assert.equal(policyService.get('v2').state, POLICY_STATES.ROLLED_BACK); // untouched, still rolled back
+  assert.equal(policyService.get('v2').state, POLICY_STATES.ROLLED_BACK, 'untouched, still rolled back');
+  assert.equal(policyService.get('v3').state, POLICY_STATES.ACTIVE, 'untouched, still active');
+  assert.deepEqual(policyService.listActive().map((p) => p.version).sort(), ['v1', 'v3']);
 });
 
-test('only the currently active policy can be rolled back', () => {
+test('only an active policy can be rolled back, but any currently active one, not just the single-default pointer', () => {
   const { policyService } = createContainer();
   policyService.createDraft({ ...DEFAULT_POLICY, version: 'v2', regularWeightLimit: 8 });
-  assert.throws(() => policyService.rollback('v2'), /Only the currently active policy/);
+  assert.throws(() => policyService.rollback('v2'), /Only an active policy can be rolled back/);
+
+  activateVersion(policyService, 'v3', { regularWeightLimit: 9 });
+  assert.equal(policyService.activeVersion(), 'v3');
+  assert.doesNotThrow(() => policyService.rollback('v1'), 'v1 is active, just not the newest -- it must still be rollback-able directly');
+  assert.equal(policyService.get('v3').state, POLICY_STATES.ACTIVE, 'untouched');
 });
 
 test('rule conflict detector flags overlapping weight tiers and dominant insurance thresholds', () => {

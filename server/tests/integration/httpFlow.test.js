@@ -274,7 +274,7 @@ test('a non-admin only ever sees the active policy; an admin sees the full versi
   assert.equal((await admin.get('/api/policies/v2/conflicts')).status, 200);
 });
 
-test('an admin can reactivate a rolled-back policy over HTTP, and it becomes visible to everyone again', async () => {
+test('activating a second policy over HTTP leaves the first one active too, and both are offered to operators', async () => {
   const { app } = buildApp();
   const admin = request.agent(app);
   await admin.post('/api/auth/dev-login').send({ email: 'policy-admin2@example.com', role: 'ADMIN' });
@@ -285,14 +285,46 @@ test('an admin can reactivate a rolled-back policy over HTTP, and it becomes vis
 
   const operator = request.agent(app);
   await operator.post('/api/auth/dev-login').send({ email: 'policy-op2@example.com', role: 'OPERATOR' });
-  assert.equal((await operator.get('/api/policies/v1/conflicts')).status, 404); // v1 is rolled back now, so it's hidden from operators
+  assert.equal((await operator.get('/api/policies/v1/conflicts')).status, 200, 'v1 must still be active and visible -- activating v2 is not a rollback of v1');
 
-  const reactivated = await admin.post('/api/policies/v1/activate');
+  const asOperator = await operator.get('/api/policies');
+  assert.deepEqual(asOperator.body.policies.map((p) => p.version).sort(), ['v1', 'v2']);
+  assert.deepEqual(asOperator.body.activePolicies.map((p) => p.version).sort(), ['v1', 'v2']);
+
+  await admin.post('/api/policies/v2/rollback');
+  assert.equal((await operator.get('/api/policies/v2/conflicts')).status, 404, 'hidden again once rolled back');
+  const reactivated = await admin.post('/api/policies/v2/activate');
   assert.equal(reactivated.status, 200);
   assert.equal(reactivated.body.state, 'ACTIVE');
+  assert.equal((await operator.get('/api/policies/v2/conflicts')).status, 200, 'visible again once reactivated');
+});
 
-  assert.equal((await operator.get('/api/policies/v1/conflicts')).status, 200); // visible again now that it's active
-  const asOperator = await operator.get('/api/policies');
-  assert.equal(asOperator.body.policies.length, 1);
-  assert.equal(asOperator.body.policies[0].version, 'v1');
+test('an operator can choose which of several active policies routes a parcel or batch', async () => {
+  const { app } = buildApp();
+  const admin = request.agent(app);
+  await admin.post('/api/auth/dev-login').send({ email: 'policy-admin3@example.com', role: 'ADMIN' });
+  await admin.post('/api/policies').send({ version: 'v2', insuranceValueThreshold: 5000, mailWeightLimit: 1, regularWeightLimit: 10, departments: { mail: 'Express Mail', regular: 'Express Regular', heavy: 'Express Heavy' } });
+  await admin.post('/api/policies/v2/validate');
+  await admin.post('/api/policies/v2/approve');
+  await admin.post('/api/policies/v2/activate');
+
+  const operator = request.agent(app);
+  await operator.post('/api/auth/dev-login').send({ email: 'policy-op3@example.com', role: 'OPERATOR' });
+  const policies = await operator.get('/api/policies');
+  assert.deepEqual(policies.body.activePolicies.map((p) => p.version).sort(), ['v1', 'v2']);
+
+  // A €2,000 parcel needs insurance approval under v1 (threshold €1,000) but not under v2 (threshold €5,000).
+  const underV1 = await operator.post('/api/parcels/route').send({ parcel: { id: 'CHOOSE-1', weight: 1, value: 2000, destinationCountry: 'NL' }, policyVersion: 'v1' });
+  assert.equal(underV1.body.results[0].outcome.status, 'pending');
+  const underV2 = await operator.post('/api/parcels/route').send({ parcel: { id: 'CHOOSE-2', weight: 1, value: 2000, destinationCountry: 'NL' }, policyVersion: 'v2' });
+  assert.equal(underV2.body.results[0].outcome.status, 'routed');
+  assert.equal(underV2.body.results[0].outcome.department, 'Express Mail');
+
+  const batch = await operator.post('/api/batches').send({ parcels: [{ id: 'CHOOSE-3', weight: 1, value: 0, destinationCountry: 'NL' }], idempotencyKey: 'choose-1', policyVersion: 'v2' });
+  assert.equal(batch.body.policyVersion, 'v2');
+
+  // A retired version can't be chosen -- rejected up front, not silently routed under it.
+  await admin.post('/api/policies/v2/rollback');
+  const rejected = await operator.post('/api/parcels/route').send({ parcel: { id: 'CHOOSE-4', weight: 1, value: 0, destinationCountry: 'NL' }, policyVersion: 'v2' });
+  assert.equal(rejected.status, 422);
 });

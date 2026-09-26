@@ -15,7 +15,7 @@ const STATE_TONE = { ACTIVE: 'LOW', DRAFT: 'MEDIUM', VALIDATED: 'MEDIUM', APPROV
 export default function PolicyManagerPage() {
   const { identity } = useAuth();
   const [policies, setPolicies] = useState([]);
-  const [active, setActive] = useState(null);
+  const [activeCount, setActiveCount] = useState(0);
   const [details, setDetails] = useState({});
   const [draft, setDraft] = useState({ version: '', mailWeightLimit: 1, regularWeightLimit: 10, insuranceValueThreshold: 1000, mailName: 'Mail Department', regularName: 'Regular Department', heavyName: 'Heavy Department' });
   const handleError = useApiError();
@@ -25,7 +25,7 @@ export default function PolicyManagerPage() {
   const load = useCallback(async () => {
     try {
       const data = await api('/policies');
-      setActive(data.active);
+      setActiveCount(data.activePolicies?.length ?? (data.active ? 1 : 0));
       setPolicies([...data.policies].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))));
     } catch (error) { handleError(error, 'Loading policies'); }
   }, [handleError]);
@@ -68,13 +68,19 @@ export default function PolicyManagerPage() {
       <PageHeader
         eyebrow="Governance"
         title="Routing Rules"
-        description={isAdmin ? 'Manage the rules that decide how parcels are routed.' : 'The rules currently deciding how your parcels are routed.'}
+        description={isAdmin ? 'Manage the rules that decide how parcels are routed.' : 'The rules currently available to route your parcels under.'}
       />
+
+      {activeCount > 1 && (
+        <p className="text-[11px] text-on-surface-variant">
+          {activeCount} sets of rules are active at once. Operators choose which one applies when they route a parcel or batch, from Intake.
+        </p>
+      )}
 
       {isAdmin ? (
         <details className="text-[11px] text-on-surface-variant">
           <summary className="cursor-pointer select-none hover:text-on-surface">How rule changes work</summary>
-          <p className="mt-1.5 font-mono leading-relaxed">A live version can't be edited directly. A change is saved as a new draft, then moves through validate → approve → activate before it takes effect. Rolling back deactivates it and automatically brings back whichever version was active just before -- to bring back an older version specifically, reactivate it directly from its own card below.</p>
+          <p className="mt-1.5 font-mono leading-relaxed">A live version can't be edited directly. A change is saved as a new draft, then moves through validate → approve → activate before it takes effect. More than one version can be active at the same time; operators pick which one applies when they route a parcel or batch. Rolling back a version only deactivates that one -- nothing else is activated in its place. A rolled-back version can be reactivated directly from its own card below.</p>
         </details>
       ) : (
         <p className="text-[11px] text-on-surface-variant">Only admins can see draft or past versions of the rules.</p>
@@ -105,7 +111,7 @@ export default function PolicyManagerPage() {
           return (
             <Panel
               key={policy.version}
-              meta={policy.version === active?.version ? 'Active Policy' : 'Version'}
+              meta={policy.state === 'ACTIVE' ? 'Active' : 'Version'}
               title={policy.version}
               actions={<Badge tone={STATE_TONE[policy.state]}>{policy.state}</Badge>}
             >

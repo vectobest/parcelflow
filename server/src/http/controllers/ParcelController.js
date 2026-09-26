@@ -15,12 +15,13 @@ export class ParcelController {
     const router = Router();
 
     router.post('/parcels/route', (req, res) => {
-      const { parcel, idempotencyKey } = req.body || {};
+      const { parcel, idempotencyKey, policyVersion } = req.body || {};
       const result = this.#batchService.process([parcel], {
         idempotencyKey: idempotencyKey || randomUUID(),
         actor: req.identity.actor,
         role: req.identity.role,
         correlationId: req.correlationId,
+        policyVersion,
         source: 'manual'
       });
       res.status(201).json(result);
