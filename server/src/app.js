@@ -37,7 +37,16 @@ export function createApp(container) {
     secret: config.sessionSecret,
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: 'lax', secure: config.nodeEnv === 'production', maxAge: 8 * 60 * 60 * 1000 }
+    // In production the client and server are on different origins (a split deployment), so the
+    // session cookie must be SameSite=None to be sent on cross-site fetches at all -- which the
+    // spec requires pairing with Secure. Locally they share an origin through the Vite dev proxy,
+    // where Lax is both sufficient and doesn't need HTTPS.
+    cookie: {
+      httpOnly: true,
+      sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
+      secure: config.nodeEnv === 'production',
+      maxAge: 8 * 60 * 60 * 1000
+    }
   }));
   app.use(container.passport.initialize());
   app.use(container.passport.session());

@@ -1,4 +1,7 @@
-const BASE = '/api';
+// Relative '/api' works locally via the Vite dev proxy (same origin). In a split deployment
+// (static client + separately-hosted server, e.g. Vercel + Render), VITE_API_BASE_URL points
+// straight at the server's own origin, since there's no proxy in production to rewrite it.
+const BASE = `${import.meta.env.VITE_API_BASE_URL || ''}/api`;
 
 export class ApiError extends Error {
   constructor(status, message, body) {
