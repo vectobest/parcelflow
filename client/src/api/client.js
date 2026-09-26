@@ -1,7 +1,11 @@
 // Relative '/api' works locally via the Vite dev proxy (same origin). In a split deployment
 // (static client + separately-hosted server, e.g. Vercel + Render), VITE_API_BASE_URL points
 // straight at the server's own origin, since there's no proxy in production to rewrite it.
-const BASE = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')}/api`;
+// Exported (not just used internally) because the Google OAuth login is a real full-page
+// navigation, not a fetch -- it needs this same origin to build an absolute URL, since a plain
+// '/api/...' href would resolve against the client's own origin instead of the server's.
+export const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+const BASE = `${API_ORIGIN}/api`;
 
 export class ApiError extends Error {
   constructor(status, message, body) {

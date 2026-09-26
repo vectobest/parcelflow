@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { api } from '../api/client.js';
+import { api, API_ORIGIN } from '../api/client.js';
 
 const AuthContext = createContext(null);
 
@@ -55,7 +55,7 @@ export function AuthProvider({ children }) {
   }, [loading, identity, oauthEnabled, refresh]);
 
   const loginWithGoogle = useCallback(() => {
-    window.location.href = '/api/auth/google';
+    window.location.href = `${API_ORIGIN}/api/auth/google`;
   }, []);
 
   const logout = useCallback(async () => {
