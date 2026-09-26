@@ -36,6 +36,40 @@ test('rollback restores the previous active policy', () => {
   assert.equal(policyService.activeVersion(), 'v1');
 });
 
+test('activating a new version demotes whatever was active a moment before it, so exactly one policy is ever ACTIVE', () => {
+  const { policyService } = createContainer();
+  policyService.createDraft({ ...DEFAULT_POLICY, version: 'v2', regularWeightLimit: 8 });
+  policyService.validateAndMark('v2');
+  policyService.approve('v2');
+  policyService.activate('v2');
+  assert.equal(policyService.get('v1').state, POLICY_STATES.ROLLED_BACK);
+  assert.equal(policyService.get('v2').state, POLICY_STATES.ACTIVE);
+});
+
+test('an admin can reactivate a specific, previously rolled-back version directly, not just the one rollback would auto-select', () => {
+  const { policyService } = createContainer();
+  for (const version of ['v2', 'v3']) {
+    policyService.createDraft({ ...DEFAULT_POLICY, version, regularWeightLimit: 8 });
+    policyService.validateAndMark(version);
+    policyService.approve(version);
+    policyService.activate(version);
+  }
+  // v1 -> v2 -> v3: v1 and v2 are both ROLLED_BACK now, v3 is active. Reactivate v1 specifically,
+  // not v2 (which a plain rollback of v3 would have picked automatically).
+  assert.equal(policyService.get('v1').state, POLICY_STATES.ROLLED_BACK);
+  const reactivated = policyService.activate('v1');
+  assert.equal(reactivated.state, POLICY_STATES.ACTIVE);
+  assert.equal(policyService.activeVersion(), 'v1');
+  assert.equal(policyService.get('v3').state, POLICY_STATES.ROLLED_BACK);
+  assert.equal(policyService.get('v2').state, POLICY_STATES.ROLLED_BACK); // untouched, still rolled back
+});
+
+test('only the currently active policy can be rolled back', () => {
+  const { policyService } = createContainer();
+  policyService.createDraft({ ...DEFAULT_POLICY, version: 'v2', regularWeightLimit: 8 });
+  assert.throws(() => policyService.rollback('v2'), /Only the currently active policy/);
+});
+
 test('rule conflict detector flags overlapping weight tiers and dominant insurance thresholds', () => {
   const { ruleConflictDetector } = createContainer();
   const overlapping = ruleConflictDetector.analyze({ mailWeightLimit: 10, regularWeightLimit: 5, insuranceValueThreshold: 1000, departments: { mail: 'M', regular: 'R', heavy: 'H' } });

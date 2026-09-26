@@ -248,3 +248,51 @@ test('a container XML upload routes its parcels and marks the inferred country',
   assert.equal(res.body.results[0].parcel.countrySource, 'postal-code');
   assert.equal(res.body.results[1].outcome.status, 'pending');
 });
+
+test('a non-admin only ever sees the active policy; an admin sees the full version history', async () => {
+  const { app } = buildApp();
+  const admin = request.agent(app);
+  await admin.post('/api/auth/dev-login').send({ email: 'policy-admin@example.com', role: 'ADMIN' });
+  await admin.post('/api/policies').send({ version: 'v2', insuranceValueThreshold: 1000, mailWeightLimit: 1, regularWeightLimit: 10, departments: { mail: 'M', regular: 'R', heavy: 'H' } });
+
+  const operator = request.agent(app);
+  await operator.post('/api/auth/dev-login').send({ email: 'policy-op@example.com', role: 'OPERATOR' });
+  const asOperator = await operator.get('/api/policies');
+  assert.equal(asOperator.body.policies.length, 1);
+  assert.equal(asOperator.body.policies[0].version, 'v1');
+  assert.equal(asOperator.body.policies[0].state, 'ACTIVE');
+
+  const asAdmin = await admin.get('/api/policies');
+  assert.ok(asAdmin.body.policies.length >= 2);
+  assert.ok(asAdmin.body.policies.some((p) => p.version === 'v2' && p.state === 'DRAFT'));
+
+  // A non-admin gets a plain 404 for a draft's detail, not 403 -- it doesn't confirm the draft exists.
+  const conflicts = await operator.get('/api/policies/v2/conflicts');
+  assert.equal(conflicts.status, 404);
+  const blastRadius = await operator.get('/api/policies/v2/blast-radius');
+  assert.equal(blastRadius.status, 404);
+  assert.equal((await admin.get('/api/policies/v2/conflicts')).status, 200);
+});
+
+test('an admin can reactivate a rolled-back policy over HTTP, and it becomes visible to everyone again', async () => {
+  const { app } = buildApp();
+  const admin = request.agent(app);
+  await admin.post('/api/auth/dev-login').send({ email: 'policy-admin2@example.com', role: 'ADMIN' });
+  await admin.post('/api/policies').send({ version: 'v2', insuranceValueThreshold: 1000, mailWeightLimit: 1, regularWeightLimit: 10, departments: { mail: 'M', regular: 'R', heavy: 'H' } });
+  await admin.post('/api/policies/v2/validate');
+  await admin.post('/api/policies/v2/approve');
+  await admin.post('/api/policies/v2/activate');
+
+  const operator = request.agent(app);
+  await operator.post('/api/auth/dev-login').send({ email: 'policy-op2@example.com', role: 'OPERATOR' });
+  assert.equal((await operator.get('/api/policies/v1/conflicts')).status, 404); // v1 is rolled back now, so it's hidden from operators
+
+  const reactivated = await admin.post('/api/policies/v1/activate');
+  assert.equal(reactivated.status, 200);
+  assert.equal(reactivated.body.state, 'ACTIVE');
+
+  assert.equal((await operator.get('/api/policies/v1/conflicts')).status, 200); // visible again now that it's active
+  const asOperator = await operator.get('/api/policies');
+  assert.equal(asOperator.body.policies.length, 1);
+  assert.equal(asOperator.body.policies[0].version, 'v1');
+});

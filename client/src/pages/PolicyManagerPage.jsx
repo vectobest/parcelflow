@@ -9,7 +9,7 @@ import Button from '../components/Button.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { Field, Input } from '../components/Field.jsx';
 
-const NEXT_ACTION = { DRAFT: ['validate', 'Validate'], VALIDATED: ['approve', 'Approve'], APPROVED: ['activate', 'Activate'], ACTIVE: ['rollback', 'Roll back'] };
+const NEXT_ACTION = { DRAFT: ['validate', 'Validate'], VALIDATED: ['approve', 'Approve'], APPROVED: ['activate', 'Activate'], ACTIVE: ['rollback', 'Roll back'], ROLLED_BACK: ['activate', 'Reactivate'] };
 const STATE_TONE = { ACTIVE: 'LOW', DRAFT: 'MEDIUM', VALIDATED: 'MEDIUM', APPROVED: 'MEDIUM', ROLLED_BACK: 'HIGH' };
 
 export default function PolicyManagerPage() {
@@ -50,6 +50,7 @@ export default function PolicyManagerPage() {
     try {
       const result = await api(`/policies/${version}/${action}`, { method: 'POST' });
       if (action === 'validate' && result.valid === false) toast(`${version} failed validation: ${result.errors.join(' ')}`, 'error');
+      else if (action === 'activate' && result.state === 'ACTIVE') toast(`${version} is now active.`);
       else toast(`${version} ${action === 'rollback' ? 'rolled back' : action + 'd'}.`);
       await load();
     } catch (error) { handleError(error, `Policy ${action}`); }
@@ -64,12 +65,20 @@ export default function PolicyManagerPage() {
 
   return (
     <div className="flex flex-col gap-space-sm">
-      <PageHeader eyebrow="Governance" title="Routing Rules" description="Manage the rules that decide how parcels are routed." />
+      <PageHeader
+        eyebrow="Governance"
+        title="Routing Rules"
+        description={isAdmin ? 'Manage the rules that decide how parcels are routed.' : 'The rules currently deciding how your parcels are routed.'}
+      />
 
-      <details className="text-[11px] text-on-surface-variant">
-        <summary className="cursor-pointer select-none hover:text-on-surface">How rule changes work</summary>
-        <p className="mt-1.5 font-mono leading-relaxed">A live version can't be edited directly. A change is saved as a new draft, then moves through validate → approve → activate before it takes effect. Rolling back reactivates a previous version.</p>
-      </details>
+      {isAdmin ? (
+        <details className="text-[11px] text-on-surface-variant">
+          <summary className="cursor-pointer select-none hover:text-on-surface">How rule changes work</summary>
+          <p className="mt-1.5 font-mono leading-relaxed">A live version can't be edited directly. A change is saved as a new draft, then moves through validate → approve → activate before it takes effect. Rolling back deactivates it and automatically brings back whichever version was active just before -- to bring back an older version specifically, reactivate it directly from its own card below.</p>
+        </details>
+      ) : (
+        <p className="text-[11px] text-on-surface-variant">Only admins can see draft or past versions of the rules.</p>
+      )}
 
       {isAdmin && (
         <Panel icon="gavel" title="New Draft (Rule Builder)">

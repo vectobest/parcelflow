@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { ValidationError, NotFoundError } from '../../errors/index.js';
+import { POLICY_STATES } from '../../domain/Policy.js';
 
 const MANAGED_ACTIONS = Object.freeze(['approve', 'activate', 'rollback']);
 
@@ -22,8 +23,13 @@ export class PolicyController {
   buildRouter() {
     const router = Router();
 
-    router.get('/policies', (_req, res) => {
-      res.status(200).json({ active: this.#policyService.getActive(), policies: this.#policyService.list() });
+    router.get('/policies', (req, res) => {
+      // Only an admin gets to see the rest of the version history (drafts, past approvals, rolled-back
+      // versions); everyone else only ever gets to know what's actually live -- the same policy that's
+      // already routing their parcels, not one an admin might still be drafting or has since retired.
+      const isAdmin = this.#authorizationService.can(req.identity.role, 'managePolicy');
+      const policies = isAdmin ? this.#policyService.list() : this.#policyService.list().filter((p) => p.state === POLICY_STATES.ACTIVE);
+      res.status(200).json({ active: this.#policyService.getActive(), policies });
     });
 
     router.post('/policies', (req, res) => {
@@ -33,13 +39,27 @@ export class PolicyController {
       res.status(201).json({ policy, validation });
     });
 
+    // Same visibility rule as the list above: a non-admin can only look up detail for the active
+    // policy, so a 404 (not a 403) is what they get for any other version -- indistinguishable from
+    // that version not existing at all, the same convention used for another operator's own data.
+    const assertVisible = (req, policy, res, next) => {
+      if (!policy) { next(new NotFoundError(`Policy ${req.params.version} was not found.`)); return false; }
+      if (policy.state !== POLICY_STATES.ACTIVE && !this.#authorizationService.can(req.identity.role, 'managePolicy')) {
+        next(new NotFoundError(`Policy ${req.params.version} was not found.`));
+        return false;
+      }
+      return true;
+    };
+
     router.get('/policies/:version/conflicts', (req, res, next) => {
       const policy = this.#policyService.get(req.params.version);
-      if (!policy) return next(new NotFoundError(`Policy ${req.params.version} was not found.`));
+      if (!assertVisible(req, policy, res, next)) return;
       res.status(200).json(this.#ruleConflictDetector.analyze(policy));
     });
 
-    router.get('/policies/:version/blast-radius', (req, res) => {
+    router.get('/policies/:version/blast-radius', (req, res, next) => {
+      const policy = this.#policyService.get(req.params.version);
+      if (!assertVisible(req, policy, res, next)) return;
       res.status(200).json(this.#policyBlastRadiusService.analyze(req.params.version));
     });
 
